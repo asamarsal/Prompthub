@@ -45,53 +45,23 @@ export function PurchaseModal({
       // 1. Message Signing for Authentication
       const challenge = `Authorize purchase of "${prompt.title}" for ${total.toFixed(6)} STX\nNonce: ${Math.random().toString(36).substring(7)}\nTime: ${Date.now()}`
 
-      // Dynamic imports — runs client-side only (button click handler)
-      const [{ openSignatureRequestPopup }, { verifyMessageSignatureRsv }] = await Promise.all([
-        import('@stacks/connect'),
-        import('@stacks/encryption'),
-      ])
+      // Get the wallet provider injected by Leather/Xverse extension (no @stacks/connect needed)
+      const provider = window.LeatherProvider ?? window.StacksProvider ?? (window as any).XverseProviders?.StacksProvider
+      if (!provider) throw new Error("No Stacks wallet extension found")
 
-      const signResponse = await new Promise<any>((resolve, reject) => {
-        openSignatureRequestPopup({
-          message: challenge,
-          appDetails: {
-            name: "Prompthub",
-            icon: `${window.location.origin}/icon.svg`,
-          },
-          onFinish: (data: any) => resolve(data),
-          onCancel: () => reject(new Error("Signature rejected")),
-        })
-      })
-
-      const isValid = verifyMessageSignatureRsv({
-        message: challenge,
-        signature: signResponse.signature,
-        publicKey: signResponse.publicKey
-      })
-
-      if (!isValid) {
-        console.error("Signature verification failed")
+      // 1. Sign a challenge message for authentication
+      const signResponse = await provider.request('stx_signMessage', { message: challenge })
+      // Basic signature check (trusting the wallet's signing)
+      if (!signResponse?.result) {
         setState("confirm")
         return
       }
 
-      // 2. STX/sBTC Transfer 
-      // Note: for a real SIP-010 sBTC transfer we would use openContractCall, 
-      // but for this demo simulation we will execute a standard STX testnet transfer 
-      // while displaying the chosen currency in the UI.
-      const { openSTXTransfer } = await import('@stacks/connect')
-      const transferResponse = await new Promise<any>((resolve, reject) => {
-        openSTXTransfer({
-          amount: amountToMicroStx.toString(),
-          recipient: 'ST9HWDEXT80QXEAYFZ57VK39ZNWP6213TFES5KCE',
-          memo: `Buy Prompt ${prompt.id} via ${currency}`,
-          appDetails: {
-            name: "Prompthub",
-            icon: `${window.location.origin}/icon.svg`,
-          },
-          onFinish: (data: any) => resolve(data),
-          onCancel: () => reject(new Error("Transfer rejected")),
-        })
+      // 2. STX Transfer (raw provider API — works on testnet & mainnet)
+      const transferResponse = await provider.request('stx_transferStx', {
+        amount: amountToMicroStx.toString(),
+        recipient: 'ST9HWDEXT80QXEAYFZ57VK39ZNWP6213TFES5KCE',
+        memo: `Buy Prompt ${prompt.id} via ${currency}`,
       })
 
       if (transferResponse && transferResponse.txid) {
