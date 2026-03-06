@@ -36,7 +36,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           setWallet({
             isConnected: true,
             address: stxAddress,
-            balance: 0.1542, // Mock balance, ideally fetched via Stacks API
+            balance: 0.1542,
             network: "testnet",
           })
         }
@@ -47,12 +47,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(async (walletType?: string) => {
     setIsConnecting(true)
     try {
-      const { isConnected, getLocalStorage, showConnect } = await import('@stacks/connect');
+      // `connect` from @stacks/connect v8 shows a built-in wallet selector UI
+      // and returns the user's addresses once they connect.
+      const { connect: stacksConnect } = await import('@stacks/connect');
 
-      if (isConnected()) {
-        const userData = getLocalStorage();
-        if (userData?.addresses) {
-          const stxAddress = userData.addresses.stx[0].address;
+      const result = await stacksConnect({
+        forceWalletSelect: false,
+        persistWalletSelect: true,
+      });
+
+      if (result?.addresses) {
+        // Find the STX address from the returned list
+        const stxEntry = (result.addresses as any[]).find(
+          (a: any) => a.symbol === "STX" || a.symbol === "STACKS"
+        ) || result.addresses[0];
+
+        const stxAddress = stxEntry?.address || (typeof stxEntry === 'string' ? stxEntry : null);
+
+        if (stxAddress) {
           setWallet({
             isConnected: true,
             address: stxAddress,
@@ -60,38 +72,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             network: "testnet",
           })
         }
-        setIsConnecting(false)
-        return
       }
-
-      // Prompt the Stacks Wallet extension
-      showConnect({
-        appDetails: {
-          name: "Prompthub",
-          icon: `${window.location.origin}/icon.svg`,
-        },
-        onFinish: () => {
-          const userData = getLocalStorage();
-          if (userData?.addresses) {
-            const stxAddress = userData.addresses.stx[0].address;
-            setWallet({
-              isConnected: true,
-              address: stxAddress,
-              balance: 0.1542,
-              network: "testnet",
-            })
-          }
-        },
-        onCancel: () => {
-          setIsConnecting(false)
-        }
-      });
     } catch (error) {
       console.error("Wallet connection failed:", error)
     } finally {
       setIsConnecting(false)
     }
-    void walletType // Unused in this simple implementation
+    void walletType
   }, [])
 
   const disconnect = useCallback(async () => {
