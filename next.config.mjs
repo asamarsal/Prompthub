@@ -6,6 +6,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  transpilePackages: ['@stacks/connect', '@stacks/encryption', '@stacks/common', '@stacks/network'],
 }
 
 export default nextConfig

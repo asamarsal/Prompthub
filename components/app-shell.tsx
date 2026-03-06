@@ -1,13 +1,9 @@
 "use client"
 
 import type { ReactNode } from "react"
-import dynamic from "next/dynamic"
+import { WalletProvider } from "@/lib/wallet-context"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
-
-const WalletProvider = dynamic(() => import("@/lib/wallet-context").then((mod) => mod.WalletProvider), {
-  ssr: false,
-})
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
