@@ -47,7 +47,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(async (walletType?: string) => {
     setIsConnecting(true)
     try {
-      const { isConnected, getLocalStorage, connect: stacksConnect } = await import('@stacks/connect');
+      const { isConnected, getLocalStorage, showConnect } = await import('@stacks/connect');
 
       if (isConnected()) {
         const userData = getLocalStorage();
@@ -65,17 +65,27 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
 
       // Prompt the Stacks Wallet extension
-      const response = await stacksConnect();
-      if (response && response.addresses) {
-        // The API actually returns an array of object mappings, e.g. [{ symbol: "STX", address: "SP..."}]
-        const stxData = (response.addresses as any[]).find(a => a.symbol === "STX") || response.addresses[0];
-        setWallet({
-          isConnected: true,
-          address: stxData.address || stxData,
-          balance: 0.1542,
-          network: "testnet",
-        })
-      }
+      showConnect({
+        appDetails: {
+          name: "Prompthub",
+          icon: `${window.location.origin}/icon.svg`,
+        },
+        onFinish: () => {
+          const userData = getLocalStorage();
+          if (userData?.addresses) {
+            const stxAddress = userData.addresses.stx[0].address;
+            setWallet({
+              isConnected: true,
+              address: stxAddress,
+              balance: 0.1542,
+              network: "testnet",
+            })
+          }
+        },
+        onCancel: () => {
+          setIsConnecting(false)
+        }
+      });
     } catch (error) {
       console.error("Wallet connection failed:", error)
     } finally {

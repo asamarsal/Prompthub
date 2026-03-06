@@ -46,10 +46,18 @@ export function PurchaseModal({
       const challenge = `Authorize purchase of "${prompt.title}" for ${total.toFixed(6)} STX\nNonce: ${Math.random().toString(36).substring(7)}\nTime: ${Date.now()}`
 
       // Load stacks/connect dynamically to prevent Turbopack client-side crashes
-      const { request } = await import("@stacks/connect")
+      const { openSignatureRequestPopup } = await import("@stacks/connect")
 
-      const signResponse = await request('stx_signMessage', {
-        message: challenge,
+      const signResponse = await new Promise<any>((resolve, reject) => {
+        openSignatureRequestPopup({
+          message: challenge,
+          appDetails: {
+            name: "Prompthub",
+            icon: `${window.location.origin}/icon.svg`,
+          },
+          onFinish: (data) => resolve(data),
+          onCancel: () => reject(new Error("Signature rejected")),
+        })
       })
 
       // Load encryption module dynamically to prevent Next.js client-side Turbopack crashes
@@ -71,10 +79,19 @@ export function PurchaseModal({
       // Note: for a real SIP-010 sBTC transfer we would use openContractCall, 
       // but for this demo simulation we will execute a standard STX testnet transfer 
       // while displaying the chosen currency in the UI.
-      const transferResponse = await request('stx_transferStx', {
-        amount: amountToMicroStx.toString(),
-        recipient: 'ST9HWDEXT80QXEAYFZ57VK39ZNWP6213TFES5KCE', // Use valid Testnet address format (ST...) not Mainnet (SP...)
-        memo: `Buy Prompt ${prompt.id} via ${currency}`,
+      const { openSTXTransfer } = await import("@stacks/connect")
+      const transferResponse = await new Promise<any>((resolve, reject) => {
+        openSTXTransfer({
+          amount: amountToMicroStx.toString(),
+          recipient: 'ST9HWDEXT80QXEAYFZ57VK39ZNWP6213TFES5KCE', // Use valid Testnet address format (ST...) not Mainnet (SP...)
+          memo: `Buy Prompt ${prompt.id} via ${currency}`,
+          appDetails: {
+            name: "Prompthub",
+            icon: `${window.location.origin}/icon.svg`,
+          },
+          onFinish: (data) => resolve(data),
+          onCancel: () => reject(new Error("Transfer rejected")),
+        })
       })
 
       if (transferResponse && transferResponse.txid) {
