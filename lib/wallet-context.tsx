@@ -1,8 +1,6 @@
 "use client"
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
-// Import individual files to avoid barrel-file Turbopack issues
-import { connect as stacksConnect, isConnected as stacksIsConnected, disconnect as stacksDisconnect, getLocalStorage } from '@stacks/connect';
 
 interface WalletState {
   isConnected: boolean
@@ -30,24 +28,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   // Autoconnect on mount if already authenticated
   useEffect(() => {
-    if (stacksIsConnected()) {
-      const userData = getLocalStorage();
-      if (userData?.addresses) {
-        const stxAddress = userData.addresses.stx[0].address;
-        setWallet({
-          isConnected: true,
-          address: stxAddress,
-          balance: 0.1542, // Mock balance, ideally fetched via Stacks API
-          network: "testnet",
-        })
+    import('@stacks/connect').then(({ isConnected, getLocalStorage }) => {
+      if (isConnected()) {
+        const userData = getLocalStorage();
+        if (userData?.addresses) {
+          const stxAddress = userData.addresses.stx[0].address;
+          setWallet({
+            isConnected: true,
+            address: stxAddress,
+            balance: 0.1542, // Mock balance, ideally fetched via Stacks API
+            network: "testnet",
+          })
+        }
       }
-    }
+    }).catch(console.error)
   }, [])
 
   const connect = useCallback(async (walletType?: string) => {
     setIsConnecting(true)
     try {
-      if (stacksIsConnected()) {
+      const { isConnected, getLocalStorage, connect: stacksConnect } = await import('@stacks/connect');
+
+      if (isConnected()) {
         const userData = getLocalStorage();
         if (userData?.addresses) {
           const stxAddress = userData.addresses.stx[0].address;
@@ -82,14 +84,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     void walletType // Unused in this simple implementation
   }, [])
 
-  const disconnect = useCallback(() => {
-    stacksDisconnect();
-    setWallet({
-      isConnected: false,
-      address: null,
-      balance: 0,
-      network: "testnet",
-    })
+  const disconnect = useCallback(async () => {
+    try {
+      const { disconnect: stacksDisconnect } = await import('@stacks/connect');
+      stacksDisconnect();
+      setWallet({
+        isConnected: false,
+        address: null,
+        balance: 0,
+        network: "testnet",
+      })
+    } catch (error) {
+      console.error(error)
+    }
   }, [])
 
   return (
