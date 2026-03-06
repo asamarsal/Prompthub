@@ -6,16 +6,7 @@ import { AppShell } from "@/components/app-shell"
 import { PromptCard } from "@/components/prompt-card"
 import { PurchaseModal } from "@/components/purchase-modal"
 import { prompts } from "@/lib/mock-data"
-import {
-  Star,
-  Share2,
-  Heart,
-  Copy,
-  BadgeCheck,
-  Clock,
-  ChevronRight,
-  Lock,
-} from "lucide-react"
+import { ChevronRight, Check, Copy, Heart, MessageSquare, Share2, Star, ShieldCheck, Download, ExternalLink, Zap, Lock, BadgeCheck, Clock } from "lucide-react"
 
 const mockReviews = [
   { id: 1, user: "0xab12...cd34", userName: "CryptoCreator", rating: 5, comment: "Incredible results! The prompts generated stunning portraits every time.", date: "2026-02-25", verified: true },

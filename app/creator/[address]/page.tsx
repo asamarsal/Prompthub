@@ -4,18 +4,7 @@ import { useState } from "react"
 import { AppShell } from "@/components/app-shell"
 import { PromptCard } from "@/components/prompt-card"
 import { prompts } from "@/lib/mock-data"
-import {
-  BadgeCheck,
-  Calendar,
-  Globe,
-  Star,
-  ShoppingCart,
-  FileText,
-  TrendingUp,
-  Users,
-  Copy,
-  ExternalLink,
-} from "lucide-react"
+import { BadgeCheck, Calendar, Copy, ExternalLink, MessageSquare, ShieldCheck, Star, Users, Briefcase, Zap, Globe, ShoppingCart, FileText, TrendingUp } from "lucide-react"
 
 const creatorProfile = {
   name: "AIArtist_Pro",
@@ -139,11 +128,10 @@ export default function CreatorProfilePage() {
               role="tab"
               aria-selected={activeTab === tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all capitalize ${
-                activeTab === tab
-                  ? "bg-gradient-to-r from-[#ff2d95] to-[#a855f7] text-white"
-                  : "text-[#a78bfa] hover:text-[#e0d4ff] hover:bg-[rgba(180,120,255,0.08)]"
-              }`}
+              className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all capitalize ${activeTab === tab
+                ? "bg-gradient-to-r from-[#ff2d95] to-[#a855f7] text-white"
+                : "text-[#a78bfa] hover:text-[#e0d4ff] hover:bg-[rgba(180,120,255,0.08)]"
+                }`}
             >
               {tab === "created" ? `Created (${createdPrompts.length})` : tab === "collected" ? `Collected (${collectedPrompts.length})` : tab === "activity" ? "Activity" : "Reviews"}
             </button>
@@ -173,15 +161,14 @@ export default function CreatorProfilePage() {
               {activityFeed.map((item, i) => (
                 <div key={i} className="glass rounded-xl p-4 flex items-start gap-3 hover:bg-[rgba(180,120,255,0.06)] transition-colors">
                   <div
-                    className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
-                      item.type === "sale"
-                        ? "bg-[#b4ff39]"
-                        : item.type === "listing"
+                    className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${item.type === "sale"
+                      ? "bg-[#b4ff39]"
+                      : item.type === "listing"
                         ? "bg-[#ff2d95]"
                         : item.type === "review"
-                        ? "bg-[#ff6b2b]"
-                        : "bg-[#00ffff]"
-                    }`}
+                          ? "bg-[#ff6b2b]"
+                          : "bg-[#00ffff]"
+                      }`}
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-[#e0d4ff] font-medium">{item.message}</p>

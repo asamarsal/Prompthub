@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
+// Import individual files to avoid barrel-file Turbopack issues
 import { connect as stacksConnect, isConnected as stacksIsConnected, disconnect as stacksDisconnect, getLocalStorage } from '@stacks/connect';
 
 interface WalletState {

@@ -3,17 +3,7 @@
 import Link from "next/link"
 import { AppShell } from "@/components/app-shell"
 import { dashboardData, prompts } from "@/lib/mock-data"
-import {
-  TrendingUp,
-  ShoppingCart,
-  FileText,
-  Star,
-  Plus,
-  Download,
-  BarChart3,
-  Eye,
-  ToggleRight,
-} from "lucide-react"
+import { Activity, ArrowUpRight, Clock, Copy, DollarSign, Download, Eye, MoreHorizontal, Settings, TrendingUp, User, ShoppingCart, FileText, Star, Plus, BarChart3, ToggleRight } from "lucide-react"
 import {
   XAxis,
   YAxis,

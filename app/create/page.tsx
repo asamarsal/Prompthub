@@ -2,16 +2,7 @@
 
 import { useState } from "react"
 import { AppShell } from "@/components/app-shell"
-import {
-  Upload,
-  Check,
-  ChevronRight,
-  ChevronLeft,
-  FileText,
-  Lightbulb,
-  X,
-  Loader2,
-} from "lucide-react"
+import { Upload, Check, ChevronRight, ChevronLeft, FileText, Lightbulb, X, Loader2 } from "lucide-react"
 import { categories as allCategories, models as allModels } from "@/lib/mock-data"
 
 const steps = ["Basic Info", "Pricing & License", "Upload Content", "Preview & Confirm"]
