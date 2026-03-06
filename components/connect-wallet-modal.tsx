@@ -77,7 +77,7 @@ export function ConnectWalletModal({ open, onClose }: { open: boolean; onClose: 
         ) : (
           <div className="flex flex-col gap-3 py-2">
             <p className="text-sm text-[#a78bfa]">
-              Choose a wallet to connect to PromptChain
+              Choose a wallet to connect to PromptHub
             </p>
             {wallets.map((w) => (
               <button

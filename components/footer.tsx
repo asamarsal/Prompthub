@@ -1,5 +1,7 @@
+"use client"
+
+import { useEffect, useRef } from "react"
 import Link from "next/link"
-import { Sparkles } from "lucide-react"
 
 const links = {
   Product: [
@@ -9,34 +11,95 @@ const links = {
   ],
   Community: [
     { href: "#", label: "Discord" },
-    { href: "#", label: "Twitter" },
-    { href: "#", label: "GitHub" },
+    { href: "https://x.com/exluminated", label: "Twitter" },
+    { href: "https://github.com/asamarsal/Prompthub", label: "GitHub" },
   ],
   Resources: [
-    { href: "#", label: "Documentation" },
+    { href: "https://github.com/asamarsal/Prompthub/blob/main/README.md", label: "Documentation" },
     { href: "#", label: "API" },
     { href: "#", label: "Status" },
   ],
 }
 
 export function Footer() {
+  const footerRef = useRef<HTMLElement>(null)
+  const topGridRef = useRef<HTMLDivElement>(null)
+  const bottomBarRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let ctx: any
+
+    const initGsap = async () => {
+      const gsapModule = await import("gsap")
+      const { ScrollTrigger } = await import("gsap/ScrollTrigger")
+      const gsap = gsapModule.default
+      gsap.registerPlugin(ScrollTrigger)
+
+      ctx = gsap.context(() => {
+        // Top grid columns: brand + 3 link groups → slide from left to right (stagger)
+        if (topGridRef.current) {
+          const cols = Array.from(topGridRef.current.children)
+          gsap.fromTo(
+            cols,
+            { x: -60, opacity: 0 },
+            {
+              x: 0,
+              opacity: 1,
+              duration: 0.7,
+              stagger: 0.12,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: topGridRef.current,
+                start: "top 90%",
+                toggleActions: "play none none reverse",
+              },
+            }
+          )
+        }
+
+        // Bottom bar: copyright + badges → slide from bottom to top
+        if (bottomBarRef.current) {
+          const items = Array.from(bottomBarRef.current.children)
+          gsap.fromTo(
+            items,
+            { y: 30, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.6,
+              stagger: 0.1,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: bottomBarRef.current,
+                start: "top 95%",
+                toggleActions: "play none none reverse",
+              },
+            }
+          )
+        }
+      }, footerRef)
+    }
+
+    initGsap()
+    return () => ctx?.revert()
+  }, [])
+
   return (
-    <footer className="relative z-10 border-t border-[rgba(180,120,255,0.12)]" role="contentinfo">
+    <footer ref={footerRef} className="relative z-10 border-t border-[rgba(180,120,255,0.12)]" role="contentinfo">
       {/* Top glow line */}
       <div className="h-px bg-gradient-to-r from-transparent via-[#ff2d95]/40 to-transparent" aria-hidden="true" />
 
       <div className="mx-auto max-w-7xl px-4 py-12 lg:px-8">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+        {/* Top grid — animates left → right */}
+        <div ref={topGridRef} className="grid grid-cols-2 gap-8 md:grid-cols-4">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2" aria-label="PromptChain Home">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-[#ff2d95] to-[#a855f7]">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-base font-bold">
-                <span className="gradient-text-chrome">Prompt</span>
-                <span className="gradient-text">Chain</span>
-              </span>
+            <Link href="/" className="flex items-center" aria-label="PromptHub Home">
+              <img
+                src="/icon/prompthub-logo.png"
+                alt="PromptHub"
+                className="h-8 w-auto object-contain"
+              />
             </Link>
             <p className="mt-3 text-sm text-[#a78bfa] leading-relaxed max-w-xs">
               The decentralized marketplace for AI prompts. Y2K edition. Powered by Bitcoin and the Stacks network.
@@ -65,9 +128,10 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-10 pt-6 border-t border-[rgba(180,120,255,0.1)] flex flex-col md:flex-row items-center justify-between gap-4">
+        {/* Bottom bar — animates bottom → up */}
+        <div ref={bottomBarRef} className="mt-10 pt-6 border-t border-[rgba(180,120,255,0.1)] flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-[#a78bfa]/50">
-            2026 PromptChain. Built on Stacks & Bitcoin. Y2K forever.
+            2026 PromptHub. Built on Stacks &amp; Bitcoin. Y2K forever.
           </p>
           <div className="flex items-center gap-4 text-xs text-[#a78bfa]/50">
             <span className="text-[#ff2d95]/60">Stacks Network</span>

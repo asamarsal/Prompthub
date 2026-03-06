@@ -395,7 +395,7 @@ export default function CreatePage() {
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input type="checkbox" className="accent-[#ff2d95] w-4 h-4" />
                       <span className="text-sm text-[#a78bfa]">
-                        I agree to the PromptChain Terms of Service and Marketplace Rules
+                        I agree to the PromptHub Terms of Service and Marketplace Rules
                       </span>
                     </label>
                   </div>

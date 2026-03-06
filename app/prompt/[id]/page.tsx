@@ -71,7 +71,7 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
               <div className="absolute inset-0" style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(180,120,255,0.02) 3px, rgba(180,120,255,0.02) 6px)' }} aria-hidden="true" />
               {/* Watermark */}
               <div className="absolute inset-0 flex items-center justify-center opacity-5" aria-hidden="true">
-                <p className="text-6xl font-extrabold text-white rotate-[-20deg] select-none">PromptChain</p>
+                <p className="text-6xl font-extrabold text-white rotate-[-20deg] select-none">PromptHub</p>
               </div>
               {/* Corner brackets */}
               <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 border-[#ff2d95]/30 rounded-tl" />

@@ -24,7 +24,7 @@ export function Navigation() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0c]/80 backdrop-blur-md border-b border-white/5" role="navigation" aria-label="Main navigation">
         <div className="mx-auto flex h-16 items-center justify-between px-4 lg:px-8">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group shrink-0" aria-label="PromptChain Home">
+          <Link href="/" className="flex items-center gap-3 group shrink-0" aria-label="PromptHub Home">
             <img
               src="/icon/prompthub-logo.png"
               alt="PromptHub Logo"
