@@ -8,7 +8,7 @@ const outfit = Outfit({ subsets: ["latin"], variable: "--font-sans" });
 const oxanium = Oxanium({ subsets: ["latin"], variable: "--font-display" });
 
 export const metadata: Metadata = {
-  title: 'PromptChain // Future Edition - The Prompt Economy',
+  title: 'PrompHub // Dapps on Stacks',
   description: 'Buy, sell, and trade AI prompts on Bitcoin. Marketplace powered by the Stacks network.',
   generator: 'v0.app',
   icons: {
