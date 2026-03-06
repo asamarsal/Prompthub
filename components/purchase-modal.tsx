@@ -4,8 +4,6 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Check, Loader2, ExternalLink, Download, LayoutDashboard, Share2 } from "lucide-react"
 import type { Prompt } from "@/lib/mock-data"
-import { openSignatureRequestPopup, openSTXTransfer } from "@stacks/connect"
-import { verifyMessageSignatureRsv } from "@stacks/encryption"
 import { useWallet } from "@/lib/wallet-context"
 
 type PurchaseState = "confirm" | "processing" | "success"
@@ -47,7 +45,12 @@ export function PurchaseModal({
       // 1. Message Signing for Authentication
       const challenge = `Authorize purchase of "${prompt.title}" for ${total.toFixed(6)} STX\nNonce: ${Math.random().toString(36).substring(7)}\nTime: ${Date.now()}`
 
-      // Load stacks/connect via static imports (transpilePackages handles bundling)
+      // Dynamic imports — runs client-side only (button click handler)
+      const [{ openSignatureRequestPopup }, { verifyMessageSignatureRsv }] = await Promise.all([
+        import('@stacks/connect'),
+        import('@stacks/encryption'),
+      ])
+
       const signResponse = await new Promise<any>((resolve, reject) => {
         openSignatureRequestPopup({
           message: challenge,
@@ -55,7 +58,7 @@ export function PurchaseModal({
             name: "Prompthub",
             icon: `${window.location.origin}/icon.svg`,
           },
-          onFinish: (data) => resolve(data),
+          onFinish: (data: any) => resolve(data),
           onCancel: () => reject(new Error("Signature rejected")),
         })
       })
@@ -76,16 +79,17 @@ export function PurchaseModal({
       // Note: for a real SIP-010 sBTC transfer we would use openContractCall, 
       // but for this demo simulation we will execute a standard STX testnet transfer 
       // while displaying the chosen currency in the UI.
+      const { openSTXTransfer } = await import('@stacks/connect')
       const transferResponse = await new Promise<any>((resolve, reject) => {
         openSTXTransfer({
           amount: amountToMicroStx.toString(),
-          recipient: 'ST9HWDEXT80QXEAYFZ57VK39ZNWP6213TFES5KCE', // Use valid Testnet address format (ST...) not Mainnet (SP...)
+          recipient: 'ST9HWDEXT80QXEAYFZ57VK39ZNWP6213TFES5KCE',
           memo: `Buy Prompt ${prompt.id} via ${currency}`,
           appDetails: {
             name: "Prompthub",
             icon: `${window.location.origin}/icon.svg`,
           },
-          onFinish: (data) => resolve(data),
+          onFinish: (data: any) => resolve(data),
           onCancel: () => reject(new Error("Transfer rejected")),
         })
       })

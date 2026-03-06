@@ -1,7 +1,6 @@
 "use client"
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
-import { connect as stacksConnect, isConnected as stacksIsConnected, disconnect as stacksDisconnect, getLocalStorage } from '@stacks/connect'
 
 interface WalletState {
   isConnected: boolean
@@ -27,27 +26,32 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   })
   const [isConnecting, setIsConnecting] = useState(false)
 
-  // Autoconnect on mount if already authenticated
+  // Autoconnect on mount if already authenticated (runs client-side only)
   useEffect(() => {
-    if (stacksIsConnected()) {
-      const userData = getLocalStorage();
-      if (userData?.addresses) {
-        const stxAddress = userData.addresses.stx[0].address;
-        setWallet({
-          isConnected: true,
-          address: stxAddress,
-          balance: 0.1542,
-          network: "testnet",
-        })
+    import('@stacks/connect').then(({ isConnected, getLocalStorage }) => {
+      if (isConnected()) {
+        const userData = getLocalStorage();
+        if (userData?.addresses) {
+          const stxAddress = userData.addresses.stx[0].address;
+          setWallet({
+            isConnected: true,
+            address: stxAddress,
+            balance: 0.1542,
+            network: "testnet",
+          })
+        }
       }
-    }
+    }).catch(console.error)
   }, [])
 
   const connect = useCallback(async (walletType?: string) => {
     setIsConnecting(true)
     try {
-      // If already connected, just re-read the address
-      if (stacksIsConnected()) {
+      // All @stacks/connect calls are dynamic to avoid SSR module evaluation crashes
+      const { connect: stacksConnect, isConnected, getLocalStorage } = await import('@stacks/connect');
+
+      // If already connected, restore session
+      if (isConnected()) {
         const userData = getLocalStorage();
         if (userData?.addresses) {
           const stxAddress = userData.addresses.stx[0].address;
@@ -62,7 +66,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      // `connect` from @stacks/connect v8 shows a wallet selector modal
+      // Show wallet selector and connect
       const result = await stacksConnect({
         forceWalletSelect: false,
         persistWalletSelect: true,
@@ -72,9 +76,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         const stxEntry = (result.addresses as any[]).find(
           (a: any) => a.symbol === "STX" || a.symbol === "STACKS"
         ) || result.addresses[0];
-
         const stxAddress = stxEntry?.address || (typeof stxEntry === 'string' ? stxEntry : null);
-
         if (stxAddress) {
           setWallet({
             isConnected: true,
@@ -92,14 +94,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     void walletType
   }, [])
 
-  const disconnect = useCallback(() => {
-    stacksDisconnect();
-    setWallet({
-      isConnected: false,
-      address: null,
-      balance: 0,
-      network: "testnet",
-    })
+  const disconnect = useCallback(async () => {
+    try {
+      const { disconnect: stacksDisconnect } = await import('@stacks/connect');
+      stacksDisconnect();
+      setWallet({ isConnected: false, address: null, balance: 0, network: "testnet" })
+    } catch (error) {
+      console.error(error)
+    }
   }, [])
 
   return (
@@ -109,9 +111,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export function useWallet() {
+export function useWallet(): WalletContextType {
   const ctx = useContext(WalletContext)
-  if (!ctx) throw new Error("useWallet must be used within WalletProvider")
+  // Return safe SSR defaults when WalletProvider hasn't mounted yet (ssr:false)
+  if (!ctx) {
+    return {
+      isConnected: false,
+      address: null,
+      balance: 0,
+      network: "testnet",
+      connect: async () => { },
+      disconnect: () => { },
+      isConnecting: false,
+    }
+  }
   return ctx
 }
 
