@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
+import { WalletSelectorModal } from "@/components/wallet-selector-modal"
 
 // Type declarations for Stacks wallet providers injected into window
 declare global {
@@ -12,9 +13,13 @@ declare global {
 }
 
 // Returns the first available Stacks wallet provider, or null
-function getProvider() {
+export function getProvider() {
   if (typeof window === 'undefined') return null
-  return window.LeatherProvider ?? window.StacksProvider ?? window.XverseProviders?.StacksProvider ?? null
+  return window.LeatherProvider
+    ?? window.StacksProvider
+    ?? (window as any).XverseProviders?.StacksProvider
+    ?? (window as any).okxwallet?.stacks
+    ?? null
 }
 
 interface WalletState {
@@ -42,6 +47,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     network: "testnet",
   })
   const [isConnecting, setIsConnecting] = useState(false)
+  const [showSelector, setShowSelector] = useState(false)
 
   // Restore wallet session from localStorage on mount
   useEffect(() => {
@@ -51,36 +57,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const connect = useCallback(async (walletType?: string) => {
+  const handleConnected = useCallback((stxAddress: string) => {
+    localStorage.setItem(STORAGE_KEY, stxAddress)
+    setWallet({ isConnected: true, address: stxAddress, balance: 0.1542, network: "testnet" })
+    setIsConnecting(false)
+  }, [])
+
+  const connect = useCallback(async (_walletType?: string) => {
     setIsConnecting(true)
-    try {
-      const provider = getProvider()
-      if (!provider) {
-        // No wallet extension installed — redirect user
-        window.open("https://leather.io", "_blank")
-        return
-      }
-
-      // Request wallet addresses using the raw provider API (no @stacks/connect needed)
-      const response = await provider.request("getAddresses")
-      const addresses: any[] = response?.result?.addresses ?? []
-
-      // Find the STX address
-      const stxEntry = addresses.find(
-        (a: any) => a.symbol === "STX" || a.type === "p2wpkh" || a.type === "stacks"
-      ) ?? addresses[0]
-      const stxAddress: string | undefined = stxEntry?.address
-
-      if (stxAddress) {
-        localStorage.setItem(STORAGE_KEY, stxAddress)
-        setWallet({ isConnected: true, address: stxAddress, balance: 0.1542, network: "testnet" })
-      }
-    } catch (error) {
-      console.error("Wallet connection failed:", error)
-    } finally {
-      setIsConnecting(false)
-    }
-    void walletType
+    // Show the wallet selector modal
+    setShowSelector(true)
   }, [])
 
   const disconnect = useCallback(() => {
@@ -91,6 +77,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   return (
     <WalletContext.Provider value={{ ...wallet, connect, disconnect, isConnecting }}>
       {children}
+      <WalletSelectorModal
+        open={showSelector}
+        onClose={() => { setShowSelector(false); setIsConnecting(false) }}
+        onConnected={handleConnected}
+      />
     </WalletContext.Provider>
   )
 }
@@ -98,7 +89,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 export function useWallet(): WalletContextType {
   const ctx = useContext(WalletContext)
   if (!ctx) {
-    // Safe SSR defaults (WalletProvider is ssr:false, so context may be missing during prerender)
     return {
       isConnected: false,
       address: null,

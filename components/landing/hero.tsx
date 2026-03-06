@@ -6,9 +6,20 @@ import { ArrowRight, Hexagon, Database, Globe } from "lucide-react"
 export function Hero() {
   return (
     <section className="relative min-h-[92vh] flex items-center justify-center overflow-hidden bg-background pt-20">
-      {/* Structural Grid Background */}
-      <div className="absolute inset-x-0 top-0 h-[50vh] bg-gradient-to-b from-primary/5 to-transparent border-b border-primary/20" aria-hidden="true" />
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,#000_70%,transparent_100%)]" aria-hidden="true" />
+      {/* Full-cover video background */}
+      <video
+        src="/video/landingpage-video.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+        aria-hidden="true"
+      />
+      {/* Dark overlay to keep text readable */}
+      <div className="absolute inset-0 bg-[#0a001a]/70" aria-hidden="true" />
+      {/* Subtle grid on top of video */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,#000_70%,transparent_100%)]" aria-hidden="true" />
 
       {/* Decorative Structural Accents */}
       <div className="absolute top-32 left-8 w-24 h-24 border-t-2 border-l-2 border-primary/40 hidden xl:block" aria-hidden="true">

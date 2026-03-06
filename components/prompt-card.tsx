@@ -63,11 +63,20 @@ export function PromptCard({ prompt }: { prompt: Prompt }) {
             {prompt.title}
           </h3>
 
-          <div className="flex items-center gap-2 mt-auto">
-            <div className="w-4 h-4 rounded-full border border-[rgba(0,255,255,0.4)] bg-transparent flex items-center justify-center">
-              <div className="w-1.5 h-1.5 bg-[#00ffff] rounded-full" />
+          <div className="flex items-center justify-between mt-auto">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full border border-[rgba(0,255,255,0.4)] bg-transparent flex items-center justify-center">
+                <div className="w-1.5 h-1.5 bg-[#00ffff] rounded-full" />
+              </div>
+              <span className="text-[11px] font-mono font-bold text-muted-foreground uppercase tracking-widest">{prompt.model}</span>
             </div>
-            <span className="text-[11px] font-mono font-bold text-muted-foreground uppercase tracking-widest">{prompt.model}</span>
+            <a
+              href={`/creator/${encodeURIComponent(prompt.creatorName)}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-[10px] font-mono font-bold text-[#a78bfa] hover:text-[#ff2d95] transition-colors uppercase tracking-widest truncate max-w-[120px]"
+            >
+              by {prompt.creatorName}
+            </a>
           </div>
 
           {/* Tags */}

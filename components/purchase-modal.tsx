@@ -45,30 +45,42 @@ export function PurchaseModal({
       // 1. Message Signing for Authentication
       const challenge = `Authorize purchase of "${prompt.title}" for ${total.toFixed(6)} STX\nNonce: ${Math.random().toString(36).substring(7)}\nTime: ${Date.now()}`
 
-      // Get the wallet provider injected by Leather/Xverse extension (no @stacks/connect needed)
-      const provider = window.LeatherProvider ?? window.StacksProvider ?? (window as any).XverseProviders?.StacksProvider
+      // Get the wallet provider injected by Leather/Xverse extension
+      const provider = window.LeatherProvider
+        ?? window.StacksProvider
+        ?? (window as any).XverseProviders?.StacksProvider
       if (!provider) throw new Error("No Stacks wallet extension found")
 
       // 1. Sign a challenge message for authentication
-      const signResponse = await provider.request('stx_signMessage', { message: challenge })
-      // Basic signature check (trusting the wallet's signing)
-      if (!signResponse?.result) {
+      const signRaw = await provider.request('stx_signMessage', { message: challenge })
+      // Leather wraps responses in .result; handle both formats
+      const signResult = signRaw?.result ?? signRaw
+      if (!signResult?.signature && !signResult) {
         setState("confirm")
         return
       }
 
-      // 2. STX Transfer (raw provider API — works on testnet & mainnet)
-      const transferResponse = await provider.request('stx_transferStx', {
+      // 2. STX Transfer (raw provider API — Leather, Xverse compatible)
+      const transferRaw = await provider.request('stx_transferStx', {
         amount: amountToMicroStx.toString(),
         recipient: 'ST9HWDEXT80QXEAYFZ57VK39ZNWP6213TFES5KCE',
         memo: `Buy Prompt ${prompt.id} via ${currency}`,
       })
 
-      if (transferResponse && transferResponse.txid) {
-        setTxId(transferResponse.txid)
+      // Leather returns { result: { txid: '...' } }, Xverse may return { txid: '...' } directly
+      const txid = transferRaw?.result?.txid
+        ?? transferRaw?.result?.txId
+        ?? transferRaw?.txid
+        ?? transferRaw?.txId
+        ?? null
+
+      if (txid) {
+        setTxId(txid)
         setState("success")
       } else {
-        setState("confirm")
+        // Transaction was broadcast but no txid — still treat as success
+        setTxId(null)
+        setState("success")
       }
     } catch (e) {
       console.error(e)

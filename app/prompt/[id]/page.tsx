@@ -189,7 +189,10 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
           <div className="lg:col-span-2">
             <div className="sticky top-24">
               {/* Creator info */}
-              <div className="bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] p-5 mb-4 group cursor-pointer hover:border-[#ff2d95] transition-all hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#ff2d95]">
+              <Link
+                href={`/creator/${encodeURIComponent(prompt.creatorName)}`}
+                className="block bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] p-5 mb-4 group cursor-pointer hover:border-[#ff2d95] transition-all hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#ff2d95]"
+              >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#ff2d95] to-[#a855f7]" />
                   <div>
@@ -200,7 +203,7 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
                     <p className="text-xs text-[#a78bfa]/50 font-mono">{prompt.creator}</p>
                   </div>
                 </div>
-              </div>
+              </Link>
 
               {/* Price card */}
               <div className="bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] p-6">
