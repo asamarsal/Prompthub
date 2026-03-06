@@ -4,8 +4,6 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Check, Loader2, ExternalLink, Download, LayoutDashboard, Share2 } from "lucide-react"
 import type { Prompt } from "@/lib/mock-data"
-import { request } from "@stacks/connect"
-import { verifyMessageSignatureRsv } from "@stacks/encryption"
 import { useWallet } from "@/lib/wallet-context"
 
 type PurchaseState = "confirm" | "processing" | "success"
@@ -47,9 +45,15 @@ export function PurchaseModal({
       // 1. Message Signing for Authentication
       const challenge = `Authorize purchase of "${prompt.title}" for ${total.toFixed(6)} STX\nNonce: ${Math.random().toString(36).substring(7)}\nTime: ${Date.now()}`
 
+      // Load stacks/connect dynamically to prevent Turbopack client-side crashes
+      const { request } = await import("@stacks/connect")
+
       const signResponse = await request('stx_signMessage', {
         message: challenge,
       })
+
+      // Load encryption module dynamically to prevent Next.js client-side Turbopack crashes
+      const { verifyMessageSignatureRsv } = await import("@stacks/encryption")
 
       const isValid = verifyMessageSignatureRsv({
         message: challenge,
