@@ -1,0 +1,108 @@
+"use client"
+
+import Link from "next/link"
+import { Star } from "lucide-react"
+import type { Prompt } from "@/lib/mock-data"
+import { cn } from "@/lib/utils"
+
+const categoryIcons: Record<string, string> = {
+  "Image Generation": "IMG",
+  "Code Generation": "DEV",
+  "Text Generation": "TXT",
+  "Audio Generation": "WAV",
+  "Video Generation": "VID",
+}
+
+export function PromptCard({ prompt }: { prompt: Prompt }) {
+  // Use primary color for image generation to match the screenshot, and secondary/accent for others
+  const isImageCategory = prompt.category === "Image Generation" || prompt.category === "UI/UX Design"
+  const themeColor = isImageCategory
+    ? "bg-[#00ffff] text-[#00ffff] border-[#00ffff] shadow-[4px_4px_0_0_#00ffff]"
+    : "bg-[#ff2d95] text-[#ff2d95] border-[#ff2d95] shadow-[4px_4px_0_0_#ff2d95]"
+
+  const accentHex = isImageCategory ? "#00ffff" : "#ff2d95"
+
+  return (
+    <Link href={`/prompt/${prompt.id}`} className="group block h-[420px]">
+      <div className={cn(
+        "relative bg-[#16161a]/60 backdrop-blur-xl border border-[#2a2a30] transition-all duration-200 h-full flex flex-col cursor-pointer",
+        isImageCategory
+          ? "group-hover:border-[#00ffff] group-hover:-translate-x-2 group-hover:-translate-y-2 group-hover:shadow-[inset_0_0_0_1px_#00ffff,8px_8px_0px_0px_#00ffff]"
+          : "group-hover:border-[#ff2d95] group-hover:-translate-x-2 group-hover:-translate-y-2 group-hover:shadow-[inset_0_0_0_1px_#ff2d95,8px_8px_0px_0px_#ff2d95]"
+      )}>
+        {/* Preview area with stark watermark */}
+        <div className="relative h-[200px] bg-gradient-to-br from-[#1a1c23] to-[#161218] flex items-center justify-center border-b border-[#2a2a30] overflow-hidden group-hover:border-[#00ffff]/30 transition-colors">
+          {/* Brutalist Watermark matching screenshot exact angle and text */}
+          {prompt.isCurated && (
+            <div className="absolute inset-x-[-20%] inset-y-0 flex items-center justify-center -rotate-[12deg] pointer-events-none opacity-20">
+              <span className="text-[2.8rem] md:text-[3.5rem] font-display font-black tracking-[-0.04em] uppercase leading-[0.85] text-white">
+                VERIFIED<br />ORIGINAL
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="px-6 py-5 flex flex-col flex-grow relative z-10 bg-transparent">
+          <div className="flex items-center justify-between mb-4">
+            <div className="px-3 py-1.5 flex items-center gap-2 border border-[#00ffff]/40 bg-transparent">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-sm opacity-75 bg-[#00ffff]"></span>
+                <span className="relative inline-flex rounded-sm h-2 w-2 bg-[#00ffff]"></span>
+              </span>
+              <span className="text-[11px] font-display font-bold uppercase tracking-widest text-[#00ffff]">{prompt.category}</span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <Star className="w-4 h-4 text-[#ff2d95] fill-[#ff2d95]" />
+              <span className="text-sm font-display font-bold text-white leading-none mt-0.5">{prompt.rating || 0}</span>
+            </div>
+          </div>
+
+          <h3 className="text-[1.1rem] font-display font-black tracking-widest text-white uppercase leading-[1.2] mb-2 w-11/12 mt-1 line-clamp-2">
+            {prompt.title}
+          </h3>
+
+          <div className="flex items-center gap-2 mt-auto">
+            <div className="w-4 h-4 rounded-full border border-[rgba(0,255,255,0.4)] bg-transparent flex items-center justify-center">
+              <div className="w-1.5 h-1.5 bg-[#00ffff] rounded-full" />
+            </div>
+            <span className="text-[11px] font-mono font-bold text-muted-foreground uppercase tracking-widest">{prompt.model}</span>
+          </div>
+
+          {/* Tags */}
+          <div className="flex flex-wrap gap-3 mt-4 pt-1">
+            <span className="px-2 py-1 flex items-center justify-center text-[10px] font-display font-bold bg-transparent text-[#00ffff] uppercase border border-[#00ffff]/40">
+              #UI
+            </span>
+            <span className="px-2 py-1 flex items-center justify-center text-[10px] font-display font-bold bg-transparent text-[#ff2d95] uppercase border border-[#ff2d95]/40">
+              #GLASSMORPHISM
+            </span>
+          </div>
+
+          {/* Footer / Action */}
+          <div className="flex items-end justify-between mt-6 pt-5 border-t border-white/10 group-hover:border-[#00ffff]/30 transition-colors">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-widest mb-1.5">PRICE</span>
+              <div className="flex items-center gap-2">
+                <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#ff2d95]">
+                  <path d="M6.5 0L0 8H5.5L4.5 16L11.5 7H6L6.5 0Z" fill="currentColor" />
+                </svg>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-[1.4rem] font-display font-black leading-none tracking-tight text-[#ff2d95]">
+                    {prompt.price.toFixed(3)}
+                  </span>
+                  <span className="text-sm font-display font-bold text-[#ff2d95]">sBTC</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[#00ffff] text-black px-6 py-2.5 font-display font-black text-sm tracking-widest uppercase transition-all group-hover:shadow-[4px_4px_0px_0px_#fff] group-hover:-translate-x-1 group-hover:-translate-y-1">
+              VIEW
+            </div>
+          </div>
+        </div>
+      </div>
+    </Link>
+  )
+}

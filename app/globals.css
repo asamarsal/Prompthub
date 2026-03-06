@@ -1,0 +1,182 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Dark Mode Default / Cyberpunk Theme */
+  --background: #0A0A0B;
+  --foreground: #ffffff;
+
+  --card: #0e0e10;
+  --card-foreground: #ffffff;
+
+  --popover: #0e0e10;
+  --popover-foreground: #ffffff;
+
+  /* Neon Cyan */
+  --primary: #00d9ff;
+  --primary-foreground: #0A0A0B;
+
+  /* Coral Pop */
+  --secondary: #ff6b9d;
+  --secondary-foreground: #0A0A0B;
+
+  --muted: #222226;
+  --muted-foreground: #a6a6aa;
+
+  /* Warm Orange Accent */
+  --accent: #f97316;
+  --accent-foreground: #0A0A0B;
+
+  --destructive: #f43f5e;
+  --destructive-foreground: #ffffff;
+
+  --border: #2e2e33;
+  --input: #222226;
+  --ring: #00d9ff;
+
+  --radius: 0rem;
+  /* Brutalist = sharp corners */
+}
+
+@theme inline {
+  --font-sans: 'Outfit', sans-serif;
+  --font-display: 'Oxanium', sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground;
+    font-family: var(--font-sans);
+    background-image:
+      radial-gradient(circle at 15% 50%, rgba(0, 217, 255, 0.05), transparent 25%),
+      radial-gradient(circle at 85% 30%, rgba(255, 107, 157, 0.05), transparent 25%);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    @apply font-bold tracking-tight uppercase;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-sans {
+    font-family: var(--font-sans);
+  }
+
+  /* Cyberpunk Neobrutalism Utilities */
+  .neo-box {
+    @apply bg-card border-2 border-white/20 backdrop-blur-xl transition-all duration-300;
+    box-shadow: 6px 6px 0px 0px rgba(255, 255, 255, 0.1);
+  }
+
+  .neo-box:hover {
+    @apply border-primary;
+    box-shadow: 6px 6px 0px 0px var(--primary);
+    transform: translate(-2px, -2px);
+  }
+
+  .neo-btn-primary {
+    @apply relative inline-flex items-center justify-center px-6 py-3 font-display font-bold text-background bg-primary border-2 border-primary uppercase tracking-wider overflow-hidden transition-all duration-200;
+    box-shadow: 4px 4px 0px 0px rgba(255, 255, 255, 0.8);
+  }
+
+  .neo-btn-primary:hover:not(:disabled) {
+    @apply bg-transparent text-primary;
+    box-shadow: 6px 6px 0px 0px var(--primary);
+    transform: translate(-2px, -2px);
+    text-shadow: 0 0 8px var(--primary);
+  }
+
+  .neo-btn-primary:active:not(:disabled) {
+    transform: translate(4px, 4px);
+    box-shadow: 0px 0px 0px 0px var(--primary);
+  }
+
+  .neo-btn-secondary {
+    @apply relative inline-flex items-center justify-center px-6 py-3 font-display font-bold text-foreground bg-transparent border-2 border-white/30 uppercase tracking-wider transition-all duration-200;
+    box-shadow: 4px 4px 0px 0px rgba(255, 255, 255, 0.2);
+  }
+
+  .neo-btn-secondary:hover:not(:disabled) {
+    @apply border-secondary text-secondary;
+    box-shadow: 6px 6px 0px 0px var(--secondary);
+    transform: translate(-2px, -2px);
+  }
+
+  .neo-btn-secondary:active:not(:disabled) {
+    transform: translate(4px, 4px);
+    box-shadow: 0px 0px 0px 0px var(--secondary);
+  }
+
+  .neo-input {
+    @apply w-full bg-black/40 border-2 border-white/20 text-foreground px-4 py-3 font-sans focus:outline-none focus:border-primary transition-colors placeholder:text-white/30;
+    box-shadow: inset 2px 2px 0px 0px rgba(0, 0, 0, 0.5);
+  }
+
+  .glass-panel {
+    @apply bg-black/40 backdrop-blur-md border border-white/10;
+  }
+
+  .text-glow-primary {
+    text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+  }
+
+  .text-glow-secondary {
+    text-shadow: 0 0 10px rgba(255, 107, 157, 0.5);
+  }
+
+  /* CRT scanline effect overlay */
+  .crt-overlay::before {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    z-index: 50;
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+    opacity: 0.3;
+  }
+}
