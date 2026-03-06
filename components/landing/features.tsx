@@ -7,8 +7,7 @@ const features = [
     description:
       "Every transaction is secured by Bitcoin, the most trusted blockchain. Your prompts are protected by the strongest proof-of-work network.",
     color: "from-[#ff6b2b] to-[#ff2d95]",
-    glowColor: "group-hover:shadow-[0_0_30px_rgba(255,107,43,0.3)]",
-    borderColor: "group-hover:border-[rgba(255,107,43,0.3)]",
+    accent: "#ff6b2b",
     iconText: "text-[#ff6b2b]",
   },
   {
@@ -17,8 +16,7 @@ const features = [
     description:
       "Set your royalty percentage and earn from every resale. Smart contracts automatically distribute payments to original creators.",
     color: "from-[#ff2d95] to-[#a855f7]",
-    glowColor: "group-hover:shadow-[0_0_30px_rgba(255,45,149,0.3)]",
-    borderColor: "group-hover:border-[rgba(255,45,149,0.3)]",
+    accent: "#ff2d95",
     iconText: "text-[#ff2d95]",
   },
   {
@@ -27,8 +25,7 @@ const features = [
     description:
       "On-chain verification ensures provenance and authenticity. Each prompt purchase is recorded immutably on the Stacks blockchain.",
     color: "from-[#00ffff] to-[#a855f7]",
-    glowColor: "group-hover:shadow-[0_0_30px_rgba(0,255,255,0.3)]",
-    borderColor: "group-hover:border-[rgba(0,255,255,0.3)]",
+    accent: "#00ffff",
     iconText: "text-[#00ffff]",
   },
   {
@@ -37,8 +34,7 @@ const features = [
     description:
       "sBTC payments settle in minutes, not days. No intermediaries, no chargebacks. Direct peer-to-peer transactions.",
     color: "from-[#b4ff39] to-[#00ffff]",
-    glowColor: "group-hover:shadow-[0_0_30px_rgba(180,255,57,0.3)]",
-    borderColor: "group-hover:border-[rgba(180,255,57,0.3)]",
+    accent: "#b4ff39",
     iconText: "text-[#b4ff39]",
   },
 ]
@@ -61,19 +57,23 @@ export function Features() {
           {features.map((feature, i) => (
             <div
               key={feature.title}
-              className={`group glass rounded-2xl p-6 transition-all duration-300 hover:bg-[rgba(180,120,255,0.1)] hover:-translate-y-2 ${feature.glowColor} ${feature.borderColor}`}
-              style={{ animationDelay: `${i * 100}ms` }}
+              className="group bg-[#0a001a] border-2 border-[#2a2a30] p-6 transition-all duration-200 hover:-translate-x-1 hover:-translate-y-1 cursor-default"
+              style={{
+                ['--tw-shadow' as any]: `6px 6px 0 0 ${feature.accent}`,
+                boxShadow: `2px 2px 0 0 ${feature.accent}40`,
+              }}
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = `6px 6px 0 0 ${feature.accent}`)}
+              onMouseLeave={e => (e.currentTarget.style.boxShadow = `2px 2px 0 0 ${feature.accent}40`)}
             >
-              {/* Icon with glow ring */}
-              <div className={`relative w-14 h-14 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-5`}>
+              {/* Icon */}
+              <div className={`relative w-14 h-14 bg-gradient-to-br ${feature.color} flex items-center justify-center mb-5 border-2 border-white/10`}>
                 <feature.icon className="w-7 h-7 text-white" />
-                <div className="absolute inset-0 rounded-xl border border-white/20" />
               </div>
-              <h3 className="text-lg font-bold text-[#e0d4ff] mb-2">{feature.title}</h3>
+              <h3 className="text-base font-extrabold text-[#e0d4ff] mb-2 uppercase tracking-wider">{feature.title}</h3>
               <p className="text-sm text-[#a78bfa] leading-relaxed">{feature.description}</p>
 
-              {/* Corner accent */}
-              <div className="mt-4 w-8 h-0.5 rounded-full bg-gradient-to-r from-[#ff2d95] to-transparent opacity-40" />
+              {/* Bottom accent line */}
+              <div className="mt-5 h-0.5 w-10" style={{ background: feature.accent }} />
             </div>
           ))}
         </div>

@@ -5,7 +5,7 @@ import { ArrowRight, Hexagon, Database, Globe } from "lucide-react"
 
 export function Hero() {
   return (
-    <section className="relative min-h-[92vh] flex items-center justify-center overflow-hidden bg-background pt-20">
+    <section className="relative min-h-[92vh] flex items-start justify-center overflow-hidden bg-background pt-16">
       {/* Full-cover video background */}
       <video
         src="/video/landingpage-video.mp4"

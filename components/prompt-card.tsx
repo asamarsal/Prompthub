@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Star } from "lucide-react"
 import type { Prompt } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
@@ -14,6 +15,7 @@ const categoryIcons: Record<string, string> = {
 }
 
 export function PromptCard({ prompt }: { prompt: Prompt }) {
+  const router = useRouter()
   // Use primary color for image generation to match the screenshot, and secondary/accent for others
   const isImageCategory = prompt.category === "Image Generation" || prompt.category === "UI/UX Design"
   const themeColor = isImageCategory
@@ -70,13 +72,12 @@ export function PromptCard({ prompt }: { prompt: Prompt }) {
               </div>
               <span className="text-[11px] font-mono font-bold text-muted-foreground uppercase tracking-widest">{prompt.model}</span>
             </div>
-            <a
-              href={`/creator/${encodeURIComponent(prompt.creatorName)}`}
-              onClick={(e) => e.stopPropagation()}
+            <button
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); router.push(`/creator/${encodeURIComponent(prompt.creatorName)}`) }}
               className="text-[10px] font-mono font-bold text-[#a78bfa] hover:text-[#ff2d95] transition-colors uppercase tracking-widest truncate max-w-[120px]"
             >
               by {prompt.creatorName}
-            </a>
+            </button>
           </div>
 
           {/* Tags */}
