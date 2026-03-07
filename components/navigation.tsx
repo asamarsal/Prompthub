@@ -3,12 +3,14 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
-import { Menu, X, Search, Hexagon, LayoutDashboard, Plus, Wallet, Copy, Check } from "lucide-react"
+import { Menu, X, Search, Hexagon, LayoutDashboard, Plus, Wallet, Copy, Check, Palette, Trophy } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useWallet, truncateAddress } from "@/lib/wallet-context"
 
 const navLinks = [
   { href: "/marketplace", label: "MARKETPLACE", icon: Search },
+  { href: "/hire", label: "HIRE", icon: Palette },
+  { href: "/contests", label: "CONTESTS", icon: Trophy },
   { href: "/dashboard", label: "DASHBOARD", icon: LayoutDashboard },
   { href: "/create", label: "CREATE", icon: Plus },
 ]
@@ -42,7 +44,7 @@ export function Navigation() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8 h-full">
-            {navLinks.filter(l => isConnected || l.href === "/marketplace").map((link) => {
+            {navLinks.filter(l => isConnected || l.href !== "/dashboard").map((link) => {
               const Icon = link.icon
               const isActive = pathname === link.href
 
@@ -154,7 +156,7 @@ export function Navigation() {
         {mobileOpen && (
           <div className="md:hidden glass-panel border-t border-white/5 bg-[#0a0a0c]/95">
             <div className="flex flex-col p-4 gap-2">
-              {navLinks.map((link) => {
+              {navLinks.filter(l => isConnected || l.href !== "/dashboard").map((link) => {
                 const Icon = link.icon
                 const isActive = pathname === link.href
 

@@ -101,7 +101,7 @@ export function PromptShowcaseFullscreen() {
 
             {/* Thumbnail — top right, 1/4 of section width, responsive */}
             <div
-                className="absolute top-10 right-10 z-30 w-[50%] aspect-video border-2 overflow-hidden transition-all duration-500 hidden md:block"
+                className="absolute top-10 right-10 z-30 w-[40%] aspect-video border-2 overflow-hidden transition-all duration-500 hidden md:block"
                 style={{
                     borderColor: accent,
                     boxShadow: `8px 8px 0 0 ${accent}`,
