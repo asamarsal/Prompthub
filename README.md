@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/icon/prompthub-logo.png" alt="Prompthub Logo" width="300" />
+  <img src="prompthub-logo.png" alt="Prompthub Logo" width="300" />
 </p>
 
 # Prompthub
