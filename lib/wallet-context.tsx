@@ -55,7 +55,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved && getProvider()) {
-      setWallet(w => ({ ...w, isConnected: true, address: saved }))
+      setWallet(w => ({ ...w, isConnected: true, address: saved, balance: 0.1542, stxBalance: 42.5 }))
     }
   }, [])
 

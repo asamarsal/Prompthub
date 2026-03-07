@@ -42,7 +42,7 @@ export function Navigation() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8 h-full">
-            {navLinks.map((link) => {
+            {navLinks.filter(l => isConnected || l.href === "/marketplace").map((link) => {
               const Icon = link.icon
               const isActive = pathname === link.href
 

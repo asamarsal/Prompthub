@@ -99,9 +99,9 @@ export function PromptShowcaseFullscreen() {
             <div className="absolute bottom-16 left-6 w-12 h-12 border-b-2 border-l-2 z-20" style={{ borderColor: `${accent}80` }} aria-hidden="true" />
             <div className="absolute bottom-16 right-6 w-12 h-12 border-b-2 border-r-2 z-20" style={{ borderColor: `${accent}80` }} aria-hidden="true" />
 
-            {/* Thumbnail — top right corner */}
+            {/* Thumbnail — top right, 1/4 of section width, responsive */}
             <div
-                className="absolute top-10 right-10 z-30 w-56 h-36 md:w-220 md:h-120 border-2 overflow-hidden transition-all duration-500 hidden md:block"
+                className="absolute top-10 right-10 z-30 w-[50%] aspect-video border-2 overflow-hidden transition-all duration-500 hidden md:block"
                 style={{
                     borderColor: accent,
                     boxShadow: `8px 8px 0 0 ${accent}`,
