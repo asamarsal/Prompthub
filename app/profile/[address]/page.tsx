@@ -48,7 +48,16 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
 
     const decodedAddress = decodeURIComponent(paramAddress || "").trim()
     const currentAddress = (myAddress || "").trim()
-    const isOwn = mounted && isConnected && currentAddress.length > 0 && currentAddress.toLowerCase() === decodedAddress.toLowerCase()
+
+    // Add initialization check to avoid false negatives on first frame
+    const [isInitialized, setIsInitialized] = useState(false)
+    useEffect(() => {
+        if (mounted && currentAddress !== undefined) {
+            setIsInitialized(true)
+        }
+    }, [mounted, currentAddress])
+
+    const isOwn = isInitialized && isConnected && currentAddress.length > 0 && currentAddress.toLowerCase() === decodedAddress.toLowerCase()
 
     // Debugging logic
     useEffect(() => {
@@ -63,6 +72,19 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
 
     const [activeTab, setActiveTab] = useState<Tab>("overview")
     const [showEditProfile, setShowEditProfile] = useState(false)
+
+    // Wait until hydration is complete to avoid flashing mock data
+    if (!isInitialized) {
+        return (
+            <AppShell>
+                <div className="w-full h-screen flex items-center justify-center">
+                    <div className="text-white/40 uppercase tracking-widest text-sm font-bold animate-pulse">
+                        Loading Profile...
+                    </div>
+                </div>
+            </AppShell>
+        )
+    }
 
     // Use own profile data if own page, else sample data
     const displayProfile = isOwn ? profile : {
