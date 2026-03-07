@@ -1,3 +1,6 @@
+"use client"
+
+import { useEffect, useRef } from "react"
 import { Wallet, Search, Download } from "lucide-react"
 
 const steps = [
@@ -28,8 +31,50 @@ const steps = [
 ]
 
 export function HowItWorks() {
+  const containerRef = useRef<HTMLElement>(null)
+  const stepsContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let ctx: any
+
+    const initGsap = async () => {
+      const gsapModule = await import("gsap")
+      const { ScrollTrigger } = await import("gsap/ScrollTrigger")
+      const gsap = gsapModule.default
+      gsap.registerPlugin(ScrollTrigger)
+
+      ctx = gsap.context(() => {
+        if (stepsContainerRef.current) {
+          const stepElements = Array.from(stepsContainerRef.current.children).filter
+            (el => el.classList.contains('step-item'))
+
+          gsap.fromTo(
+            stepElements,
+            { x: -100, opacity: 0 },
+            {
+              x: 0,
+              opacity: 1,
+              duration: 0.8,
+              stagger: 0.2, // Sequences 1, 2, 3
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: containerRef.current,
+                start: "top 80%",
+                // Play when scrolling down, reverse when scrolling back up
+                toggleActions: "play none none reverse",
+              },
+            }
+          )
+        }
+      }, containerRef)
+    }
+
+    initGsap()
+    return () => ctx?.revert()
+  }, [])
+
   return (
-    <section className="py-24 relative">
+    <section ref={containerRef} className="py-24 relative overflow-hidden">
       {/* Background glow */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#ff2d95]/3 to-transparent pointer-events-none" aria-hidden="true" />
 
@@ -44,7 +89,7 @@ export function HowItWorks() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+        <div ref={stepsContainerRef} className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
           {/* Connector line (desktop) */}
           <div className="hidden md:block absolute top-20 left-[20%] right-[20%] h-px bg-gradient-to-r from-[#ff2d95]/30 via-[#a855f7]/30 to-[#00ffff]/30" aria-hidden="true" />
           {/* Pixel connector dots */}
@@ -52,7 +97,7 @@ export function HowItWorks() {
           <div className="hidden md:block absolute top-[78px] right-1/3 w-2 h-2 rotate-45 bg-[#00ffff]/40" aria-hidden="true" />
 
           {steps.map((s) => (
-            <div key={s.step} className="text-center relative group">
+            <div key={s.step} className="step-item text-center relative group opacity-0">
               <div className={`mx-auto w-18 h-18 rounded-2xl glass-iridescent flex items-center justify-center mb-6 relative transition-all group-hover:${s.glowClass}`}>
                 <s.icon className="w-8 h-8" style={{ color: s.color }} />
                 <span
