@@ -83,7 +83,7 @@ export function Hero() {
             <span className="font-mono text-xs text-primary uppercase tracking-widest font-bold">System Online</span>
           </div>
           <span className="w-px h-4 bg-primary/30" />
-          <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest bg-primary/10 px-2 py-0.5 text-primary">Bitcoin L2 Verified</span>
+          <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest bg-primary/10 px-2 py-0.5 text-primary">Build on stacks</span>
         </div>
 
         {/* Header block */}
@@ -96,7 +96,7 @@ export function Hero() {
             <div className="flex items-center gap-4 mt-6 md:pl-2">
               <div className="h-0.5 w-12 bg-primary/50" />
               <p className="text-sm md:text-base font-display font-bold text-muted-foreground uppercase tracking-[0.2em]">
-                Indexing Available Neural Artifacts
+                Marketplace Infrastructure for AI Creators
               </p>
             </div>
           </div>
