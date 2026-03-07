@@ -60,7 +60,7 @@ export function Hero() {
         aria-hidden="true"
       />
       {/* Dark overlay to keep text readable */}
-      <div className="absolute inset-0 bg-[#0a001a]/70" aria-hidden="true" />
+      <div className="absolute inset-0 bg-[#080808]/70" aria-hidden="true" />
       {/* Subtle grid on top of video */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,#000_70%,transparent_100%)]" aria-hidden="true" />
 
@@ -113,11 +113,11 @@ export function Hero() {
               }}
               className="hero-glass-btn relative inline-flex items-center justify-center px-8 py-3 font-display font-bold text-lg uppercase tracking-wider text-white transition-all duration-200 w-full md:w-auto group hover:bg-[rgba(0,217,255,0.4)]"
             >
-              ACCESS TERMINAL
+              Marketplace
               <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
             </Link>
             <button className="neo-btn-secondary w-full md:w-auto text-sm group text-primary border-primary/30 hover:border-primary">
-              CONNECT DATALINK
+              Read Docs
             </button>
           </div>
         </div>

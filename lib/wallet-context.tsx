@@ -25,7 +25,8 @@ export function getProvider() {
 interface WalletState {
   isConnected: boolean
   address: string | null
-  balance: number
+  balance: number       // sBTC
+  stxBalance: number    // STX
   network: "testnet" | "mainnet"
 }
 
@@ -44,6 +45,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     isConnected: false,
     address: null,
     balance: 0,
+    stxBalance: 0,
     network: "testnet",
   })
   const [isConnecting, setIsConnecting] = useState(false)
@@ -59,7 +61,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const handleConnected = useCallback((stxAddress: string) => {
     localStorage.setItem(STORAGE_KEY, stxAddress)
-    setWallet({ isConnected: true, address: stxAddress, balance: 0.1542, network: "testnet" })
+    setWallet({ isConnected: true, address: stxAddress, balance: 0.1542, stxBalance: 42.5, network: "testnet" })
     setIsConnecting(false)
   }, [])
 
@@ -71,7 +73,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const disconnect = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY)
-    setWallet({ isConnected: false, address: null, balance: 0, network: "testnet" })
+    setWallet({ isConnected: false, address: null, balance: 0, stxBalance: 0, network: "testnet" })
   }, [])
 
   return (
@@ -93,6 +95,7 @@ export function useWallet(): WalletContextType {
       isConnected: false,
       address: null,
       balance: 0,
+      stxBalance: 0,
       network: "testnet",
       connect: async () => { },
       disconnect: () => { },

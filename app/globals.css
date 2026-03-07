@@ -5,13 +5,13 @@
 
 :root {
   /* Dark Mode Default / Cyberpunk Theme */
-  --background: #0A0A0B;
+  --background: #080808;
   --foreground: #ffffff;
 
-  --card: #0e0e10;
+  --card: #0d0d0d;
   --card-foreground: #ffffff;
 
-  --popover: #0e0e10;
+  --popover: #0d0d0d;
   --popover-foreground: #ffffff;
 
   /* Neon Cyan */

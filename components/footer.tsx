@@ -101,7 +101,7 @@ export function Footer() {
                 className="h-8 w-auto object-contain"
               />
             </Link>
-            <p className="mt-3 text-sm text-[#a78bfa] leading-relaxed max-w-xs">
+            <p className="mt-3 text-sm text-white/70 leading-relaxed max-w-xs">
               The decentralized marketplace for AI prompts. Y2K edition. Powered by Bitcoin and the Stacks network.
             </p>
             {/* Pixel accent */}
@@ -117,7 +117,7 @@ export function Footer() {
                   <li key={item.label}>
                     <Link
                       href={item.href}
-                      className="text-sm text-[#a78bfa] hover:text-[#ff2d95] transition-colors"
+                      className="text-sm text-white/60 hover:text-white transition-colors"
                     >
                       {item.label}
                     </Link>
@@ -130,7 +130,7 @@ export function Footer() {
 
         {/* Bottom bar — animates bottom → up */}
         <div ref={bottomBarRef} className="mt-10 pt-6 border-t border-[rgba(180,120,255,0.1)] flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-[#a78bfa]/50">
+          <p className="text-xs text-white/30">
             2026 PromptHub. Built on Stacks &amp; Bitcoin. Y2K forever.
           </p>
           <div className="flex items-center gap-4 text-xs text-[#a78bfa]/50">

@@ -108,7 +108,7 @@ export function Features() {
         <div ref={headingRef} className="text-center mb-16 overflow-hidden">
           <p className="text-sm font-bold text-[#ff2d95] uppercase tracking-widest mb-3 font-mono">{"// FEATURES"}</p>
           <h2 className="text-3xl md:text-5xl font-extrabold text-[#e0d4ff] text-balance">
-            Why Build on <span className="gradient-text">PromptHub</span>
+            Why choose <span className="gradient-text">PromptHub</span>
           </h2>
           <p className="mt-4 text-[#a78bfa] max-w-xl mx-auto leading-relaxed">
             The most secure and creator-friendly marketplace for AI prompts, powered by Bitcoin.
@@ -120,7 +120,7 @@ export function Features() {
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="group bg-[#0a001a] border-2 border-[#2a2a30] p-6 transition-all duration-200 hover:-translate-x-1 hover:-translate-y-1 cursor-default"
+              className="group bg-[#080808] border-2 border-[#2a2a30] p-6 transition-all duration-200 hover:-translate-x-1 hover:-translate-y-1 cursor-default"
               style={{ boxShadow: `2px 2px 0 0 ${feature.accent}40` }}
               onMouseEnter={e => (e.currentTarget.style.boxShadow = `6px 6px 0 0 ${feature.accent}`)}
               onMouseLeave={e => (e.currentTarget.style.boxShadow = `2px 2px 0 0 ${feature.accent}40`)}

@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
-import { Menu, X, Search, Hexagon, LayoutDashboard, Plus, Wallet } from "lucide-react"
+import { Menu, X, Search, Hexagon, LayoutDashboard, Plus, Wallet, Copy, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useWallet, truncateAddress } from "@/lib/wallet-context"
 
@@ -15,9 +15,17 @@ const navLinks = [
 
 export function Navigation() {
   const pathname = usePathname()
-  const { isConnected, address, balance, disconnect, connect } = useWallet()
+  const { isConnected, address, balance, stxBalance, disconnect, connect } = useWallet()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showDisconnect, setShowDisconnect] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const copyAddress = () => {
+    if (!address) return
+    navigator.clipboard.writeText(address)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <>
@@ -77,10 +85,32 @@ export function Navigation() {
 
                   {/* Disconnect Dropdown */}
                   {showDisconnect && (
-                    <div className="absolute right-0 top-full mt-2 w-48 bg-[#0a0a0c] border border-[#2a2a30] shadow-[4px_4px_0_0_#2a2a30] z-50 p-2 flex flex-col gap-1">
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-[#0a0a0c] border border-[#2a2a30] shadow-[4px_4px_0_0_#2a2a30] z-50 p-2 flex flex-col gap-1">
                       <div className="px-3 py-2 border-b border-[#2a2a30] mb-1">
-                        <span className="text-xs text-[#a78bfa] block">Connected as</span>
-                        <span className="text-sm font-bold text-[#e0d4ff] font-mono">{truncateAddress(address!)}</span>
+                        <span className="text-xs text-[#a78bfa] block mb-1">Connected as</span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-bold text-[#e0d4ff] font-mono">{truncateAddress(address!)}</span>
+                          <button
+                            onClick={copyAddress}
+                            title="Copy full address"
+                            className="p-1 text-white/30 hover:text-[#00ffff] transition-colors"
+                          >
+                            {copied
+                              ? <Check className="w-3.5 h-3.5 text-[#b4ff39]" />
+                              : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                      {/* Balance rows */}
+                      <div className="px-3 py-2 border-b border-[#2a2a30] mb-1 flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-white/40 uppercase tracking-wider">sBTC</span>
+                          <span className="text-sm font-extrabold font-mono text-[#00ffff]">{balance.toFixed(4)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-white/40 uppercase tracking-wider">STX</span>
+                          <span className="text-sm font-extrabold font-mono text-[#a855f7]">{stxBalance.toFixed(2)}</span>
+                        </div>
                       </div>
                       <button
                         onClick={() => {
