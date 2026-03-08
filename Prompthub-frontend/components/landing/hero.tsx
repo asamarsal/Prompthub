@@ -65,12 +65,8 @@ export function Hero() {
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,#000_70%,transparent_100%)]" aria-hidden="true" />
 
       {/* Decorative Structural Accents */}
-      <div className="absolute top-32 left-8 w-24 h-24 border-t-2 border-l-2 border-primary/40 hidden xl:block" aria-hidden="true">
-        <div className="absolute top-0 left-0 w-2 h-2 bg-primary" />
-      </div>
-      <div className="absolute top-32 right-8 w-24 h-24 border-t-2 border-r-2 border-secondary/40 hidden xl:block" aria-hidden="true">
-        <div className="absolute top-0 right-0 w-2 h-2 bg-secondary" />
-      </div>
+      <div className="absolute top-32 left-8 w-24 h-24 border-t-2 border-l-2 border-primary/40 hidden xl:block" aria-hidden="true" />
+      <div className="absolute top-32 right-8 w-24 h-24 border-t-2 border-r-2 border-secondary/40 hidden xl:block" aria-hidden="true" />
 
       <div className="relative mx-auto max-w-7xl px-4 py-0 lg:py-6 lg:px-8 w-full z-4 flex flex-col items-center">
         {/* System Status Banner */}

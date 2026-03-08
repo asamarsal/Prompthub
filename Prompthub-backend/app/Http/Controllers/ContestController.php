@@ -20,15 +20,24 @@ class ContestController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'title' => 'required|string',
+            'title' => 'required|string|max:255',
+            'brand_name' => 'required|string|max:255',
+            'category' => 'required|string',
+            'about_brand' => 'required|string',
             'brief' => 'required|string',
-            'prize_sbtc' => 'nullable|numeric',
-            'deadline' => 'nullable|date',
-            'tx_id' => 'required|string', // Blockchain TX ID for funding
+            'tags' => 'nullable|array',
+            'require_prompt_submission' => 'boolean',
+            'prize_tiers' => 'required|array|min:1',
+            'prize_tiers.*.place' => 'required|integer|min:1',
+            'prize_tiers.*.prize_sbtc' => 'required|numeric|min:0',
+            'total_prize_sbtc' => 'required|numeric|min:0',
+            'deadline' => 'required|date|after:today',
+            'tx_id' => 'required|string', // Blockchain TX ID for escrow funding
         ]);
         
+        $validated['id'] = (string) \Illuminate\Support\Str::uuid();
         $validated['brand_address'] = $request->user()->stx_address ?? 'SP_MOCK_BRAND';
-        $validated['status'] = 'PENDING_FUNDING'; // Wait for Stacks confirmation
+        $validated['status'] = 'PENDING_FUNDING';
         
         $contest = Contest::create($validated);
         return response()->json($contest, 201);
