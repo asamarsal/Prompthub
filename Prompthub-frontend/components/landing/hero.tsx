@@ -108,9 +108,14 @@ export function Hero() {
               Marketplace
               <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
             </Link>
-            <button className="neo-btn-secondary w-full md:w-auto text-sm group text-primary border-primary/30 hover:border-primary">
+            <a
+              href="https://github.com/asamarsal/Prompthub"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="neo-btn-secondary w-full md:w-auto text-sm group text-primary border-primary/30 hover:border-primary inline-flex items-center justify-center p-4"
+            >
               Read Docs
-            </button>
+            </a>
           </div>
         </div>
 
