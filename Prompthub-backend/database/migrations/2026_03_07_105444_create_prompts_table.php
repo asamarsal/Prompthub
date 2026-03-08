@@ -13,17 +13,21 @@ return new class extends Migration
     {
         Schema::create('prompts', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('creator_address');
-            $table->foreign('creator_address')->references('stx_address')->on('users')->onDelete('cascade');
+            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('title');
-            $table->text('description')->nullable();
-            $table->decimal('price_stx', 18, 8)->nullable();
-            $table->decimal('price_sbtc', 18, 8)->nullable();
+            $table->text('description');
+            $table->decimal('price_stx', 16, 6)->default(0);
             $table->string('preview_image_url')->nullable();
             $table->string('cid_ipfs')->nullable();
             $table->string('ai_model')->nullable();
             $table->string('category')->nullable();
-            $table->boolean('is_published')->default(true);
+            $table->json('tags')->nullable();
+            $table->enum('content_type', ['TEXT', 'IMAGE', 'VIDEO'])->default('IMAGE');
+            $table->boolean('is_nsfw')->default(false);
+            $table->enum('license_type', ['FREE', 'COMMERCIAL', 'EXCLUSIVE'])->default('COMMERCIAL');
+            $table->integer('royalty_percentage')->default(0);
+            $table->boolean('is_published')->default(false);
+            $table->boolean('is_curated')->default(false);
             $table->integer('total_sold')->default(0);
             $table->timestamps();
         });

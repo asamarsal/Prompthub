@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->string('stx_address')->primary();
+            $table->uuid('id')->primary();
+            $table->string('stx_address')->unique()->nullable();
+            $table->string('email')->unique()->nullable();
+            $table->string('google_id')->unique()->nullable();
             $table->string('name')->nullable();
             $table->text('bio')->nullable();
             $table->string('avatar_url')->nullable();
@@ -29,7 +32,7 @@ return new class extends Migration
 
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
-            $table->foreignId('user_id')->nullable()->index();
+            $table->uuid('user_id')->nullable()->index();
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
             $table->longText('payload');

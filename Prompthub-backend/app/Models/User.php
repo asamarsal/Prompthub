@@ -7,13 +7,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
-
-    protected $primaryKey = 'stx_address';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    use HasApiTokens, HasFactory, Notifiable, HasUuids;
 
     protected $fillable = [
         'stx_address',

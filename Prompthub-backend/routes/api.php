@@ -9,6 +9,8 @@ use App\Http\Controllers\ContestController;
 use App\Http\Controllers\HireRequestController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\AiModelController;
 
 Route::post('/auth/login', [AuthController::class, 'login']);
 
@@ -17,6 +19,8 @@ Route::get('/prompts', [PromptController::class, 'index']);
 Route::get('/prompts/{id}', [PromptController::class, 'show']);
 Route::get('/contests', [ContestController::class, 'index']);
 Route::get('/contests/{id}', [ContestController::class, 'show']);
+Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/ai-models', [AiModelController::class, 'index']);
 
 // Protected routes (requires Sanctum token)
 Route::middleware('auth:sanctum')->group(function () {
@@ -24,9 +28,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/me', [AuthController::class, 'me']);
     Route::put('/users/me', [AuthController::class, 'update']);
     
+    // Taxonomy
+    Route::post('/categories', [CategoryController::class, 'store']);
+    Route::post('/ai-models', [AiModelController::class, 'store']);
+    
     // Prompts
     Route::post('/prompts', [PromptController::class, 'store']);
     Route::post('/prompts/{id}/verify-purchase', [PromptController::class, 'verifyPurchase']);
+    Route::put('/prompts/{id}/curate', [PromptController::class, 'curate']);
 
     // Contests
     Route::post('/contests', [ContestController::class, 'store']);
