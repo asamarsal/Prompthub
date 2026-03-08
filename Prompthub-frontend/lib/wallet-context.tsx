@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
 import { WalletSelectorModal } from "@/components/wallet-selector-modal"
+import { loginWithWallet, updateProfile as apiUpdateProfile, clearApiToken, fetchMe } from "@/lib/api"
 
 declare global {
   interface Window {
@@ -102,7 +103,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // Restore wallet session from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved && getProvider()) {
+    if (saved) {
       const profile = loadProfile()
       setWallet(w => ({
         ...w,
@@ -113,21 +114,72 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         profile,
         needsOnboarding: profile.roles.length === 0,
       }))
+
+      // Async refresh from backend
+      fetchMe().then(user => {
+        const merged: UserProfile = {
+          ...DEFAULT_PROFILE,
+          ...profile,
+          name: user.name ?? profile.name,
+          bio: user.bio ?? profile.bio,
+          avatarUrl: user.avatar_url ?? profile.avatarUrl,
+          coverImage: user.cover_url ?? profile.coverImage,
+          roles: (user.roles as UserRole[]) ?? profile.roles,
+          activeRole: ((user.roles as UserRole[])?.[0]) ?? profile.activeRole ?? "buyer",
+        }
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(merged))
+        setWallet(w => ({
+          ...w,
+          profile: merged,
+          needsOnboarding: merged.roles.length === 0,
+        }))
+      }).catch(() => {
+        // Token might be expired or server down, but we keep the local session for now
+      })
     }
   }, [])
 
-  const handleConnected = useCallback((stxAddress: string) => {
+  const handleConnected = useCallback(async (stxAddress: string) => {
     localStorage.setItem(STORAGE_KEY, stxAddress)
-    const profile = loadProfile()
-    setWallet({
-      isConnected: true,
-      address: stxAddress,
-      balance: 0.1542,
-      stxBalance: 42.5,
-      network: "testnet",
-      profile,
-      needsOnboarding: profile.roles.length === 0,
-    })
+    const localProfile = loadProfile()
+
+    // Persist user to backend (creates if not exists, returns token)
+    try {
+      const { user } = await loginWithWallet(stxAddress)
+      // Sync backend name/bio into local profile if present
+      const merged: UserProfile = {
+        ...DEFAULT_PROFILE,
+        ...localProfile,
+        name: user.name ?? localProfile.name,
+        bio: user.bio ?? localProfile.bio,
+        avatarUrl: user.avatar_url ?? localProfile.avatarUrl,
+        coverImage: user.cover_url ?? localProfile.coverImage,
+        roles: (user.roles as UserRole[]) ?? localProfile.roles,
+        activeRole: ((user.roles as UserRole[])?.[0]) ?? localProfile.activeRole ?? "buyer",
+      }
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(merged))
+      setWallet({
+        isConnected: true,
+        address: stxAddress,
+        balance: 0.1542,
+        stxBalance: 42.5,
+        network: "testnet",
+        profile: merged,
+        needsOnboarding: merged.roles.length === 0,
+      })
+    } catch {
+      // Fallback to local profile only if API is unreachable
+      setWallet({
+        isConnected: true,
+        address: stxAddress,
+        balance: 0.1542,
+        stxBalance: 42.5,
+        network: "testnet",
+        profile: localProfile,
+        needsOnboarding: localProfile.roles.length === 0,
+      })
+    }
+
     setIsConnecting(false)
   }, [])
 
@@ -138,6 +190,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const disconnect = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY)
+    clearApiToken()
     setWallet({
       isConnected: false,
       address: null,
@@ -149,9 +202,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  const saveProfile = useCallback((profile: UserProfile) => {
+  const saveProfile = useCallback(async (profile: UserProfile) => {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile))
     setWallet(w => ({ ...w, profile, needsOnboarding: false }))
+
+    // Persist to backend
+    try {
+      await apiUpdateProfile({
+        name: profile.name,
+        bio: profile.bio,
+        avatar_url: profile.avatarUrl || undefined,
+        cover_url: profile.coverImage || undefined,
+        roles: profile.roles,
+      })
+    } catch {
+      // Non-blocking — local state is already updated
+    }
   }, [])
 
   const switchRole = useCallback((role: UserRole) => {

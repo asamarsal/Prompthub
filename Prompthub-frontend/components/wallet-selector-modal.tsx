@@ -77,11 +77,17 @@ export function WalletSelectorModal({
 
             const response = await provider.request("getAddresses")
             const addresses: any[] = response?.result?.addresses ?? []
+
+            // Priority: Stacks-format address (SP... or ST...) > STX symbol > stacks type
+            // Explicitly skip Bitcoin native segwit addresses (tb1, bc1)
             const stxEntry =
-                addresses.find(
-                    (a: any) =>
-                        a.symbol === "STX" || a.type === "p2wpkh" || a.type === "stacks"
-                ) ?? addresses[0]
+                addresses.find((a: any) =>
+                    typeof a.address === "string" && (a.address.startsWith("SP") || a.address.startsWith("ST"))
+                ) ??
+                addresses.find((a: any) => a.symbol === "STX") ??
+                addresses.find((a: any) => a.type === "stacks") ??
+                addresses.find((a: any) => typeof a.address === "string" && !a.address.startsWith("tb1") && !a.address.startsWith("bc1"))
+
             const stxAddress: string | undefined = stxEntry?.address
 
             if (stxAddress) {

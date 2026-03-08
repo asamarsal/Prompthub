@@ -2,7 +2,9 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Star } from "lucide-react"
+import { Star, Heart } from "lucide-react"
+import { useState } from "react"
+import { toggleBookmark } from "@/lib/api"
 import type { Prompt } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 
@@ -16,6 +18,9 @@ const categoryIcons: Record<string, string> = {
 
 export function PromptCard({ prompt }: { prompt: Prompt }) {
   const router = useRouter()
+  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [loading, setLoading] = useState(false)
+
   // Use primary color for image generation to match the screenshot, and secondary/accent for others
   const isImageCategory = prompt.category === "Image Generation" || prompt.category === "UI/UX Design"
   const themeColor = isImageCategory
@@ -23,6 +28,23 @@ export function PromptCard({ prompt }: { prompt: Prompt }) {
     : "bg-[#ff2d95] text-[#ff2d95] border-[#ff2d95] shadow-[4px_4px_0_0_#ff2d95]"
 
   const accentHex = isImageCategory ? "#00ffff" : "#ff2d95"
+
+  const handleBookmark = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (loading) return
+
+    try {
+      setLoading(true)
+      const res = await toggleBookmark(prompt.id)
+      setIsBookmarked(res.is_bookmarked)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <Link href={`/prompt/${prompt.id}`} className="group block h-[420px]">
@@ -32,6 +54,18 @@ export function PromptCard({ prompt }: { prompt: Prompt }) {
           ? "group-hover:border-[#00ffff] group-hover:-translate-x-2 group-hover:-translate-y-2 group-hover:shadow-[inset_0_0_0_1px_#00ffff,8px_8px_0px_0px_#00ffff]"
           : "group-hover:border-[#ff2d95] group-hover:-translate-x-2 group-hover:-translate-y-2 group-hover:shadow-[inset_0_0_0_1px_#ff2d95,8px_8px_0px_0px_#ff2d95]"
       )}>
+        {/* Heart Toggle */}
+        <button
+          onClick={handleBookmark}
+          disabled={loading}
+          className="absolute top-4 right-4 z-[20] w-9 h-9 rounded-none border border-white/10 bg-black/40 backdrop-blur-md flex items-center justify-center transition-all hover:border-[#ff2d95] group/heart active:scale-95"
+        >
+          <Heart className={cn(
+            "w-4.5 h-4.5 transition-colors",
+            isBookmarked ? "fill-[#ff2d95] text-[#ff2d95]" : "text-white/40 group-hover/heart:text-[#ff2d95]"
+          )} />
+        </button>
+
         {/* Preview area with stark watermark */}
         <div className="relative h-[200px] bg-gradient-to-br from-[#1a1c23] to-[#161218] flex items-center justify-center border-b border-[#2a2a30] overflow-hidden group-hover:border-[#00ffff]/30 transition-colors">
           {/* Brutalist Watermark matching screenshot exact angle and text */}
@@ -57,7 +91,7 @@ export function PromptCard({ prompt }: { prompt: Prompt }) {
 
             <div className="flex items-center gap-1.5">
               <Star className="w-4 h-4 text-[#ff2d95] fill-[#ff2d95]" />
-              <span className="text-sm font-display font-bold text-white leading-none mt-0.5">{prompt.rating || 0}</span>
+              <span className="text-sm font-display font-bold text-white leading-none mt-0.5 font-bold">{prompt.rating || 0}</span>
             </div>
           </div>
 

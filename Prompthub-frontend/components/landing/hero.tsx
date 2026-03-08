@@ -7,11 +7,7 @@ import { ArrowRight, Hexagon, Database, Globe } from "lucide-react"
 const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
 
 function useScramble(target: string, durationMs = 3000, delayMs = 0) {
-  const [display, setDisplay] = useState(() =>
-    delayMs > 0
-      ? "*".repeat(target.length)
-      : target.split("").map(() => GLYPHS[Math.floor(Math.random() * GLYPHS.length)]).join("")
-  )
+  const [display, setDisplay] = useState(target)
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>

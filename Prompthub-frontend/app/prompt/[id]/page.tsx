@@ -7,6 +7,8 @@ import { PromptCard } from "@/components/prompt-card"
 import { PurchaseModal } from "@/components/purchase-modal"
 import { prompts } from "@/lib/mock-data"
 import { ChevronRight, Check, Copy, Heart, MessageSquare, Share2, Star, ShieldCheck, Download, ExternalLink, Zap, Lock, BadgeCheck, Clock } from "lucide-react"
+import { toggleBookmark } from "@/lib/api"
+import { cn } from "@/lib/utils"
 
 const mockReviews = [
   { id: 1, user: "0xab12...cd34", userName: "CryptoCreator", rating: 5, comment: "Incredible results! The prompts generated stunning portraits every time.", date: "2026-02-25", verified: true },
@@ -26,6 +28,21 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
   const prompt = prompts.find((p) => p.id === Number(id))
   const [purchaseOpen, setPurchaseOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<"description" | "reviews" | "history">("description")
+  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [bookmarkLoading, setBookmarkLoading] = useState(false)
+
+  const handleToggleBookmark = async () => {
+    if (bookmarkLoading || !prompt) return
+    try {
+      setBookmarkLoading(true)
+      const res = await toggleBookmark(prompt.id)
+      setIsBookmarked(res.is_bookmarked)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setBookmarkLoading(false)
+    }
+  }
 
   if (!prompt) {
     return (
@@ -240,9 +257,13 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
                   Buy Now
                 </button>
 
-                <button className="w-full bg-[#160f24]/80 border-2 border-[#2a2a30] py-3 text-sm font-bold text-[#e0d4ff] flex items-center justify-center gap-2 transition-all hover:border-[#ff2d95] hover:text-[#ff2d95] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_#ff2d95]">
-                  <Heart className="w-4 h-4 text-[#ff2d95]" />
-                  Add to Collection
+                <button
+                  onClick={handleToggleBookmark}
+                  disabled={bookmarkLoading}
+                  className="w-full bg-[#160f24]/80 border-2 border-[#2a2a30] py-3 text-sm font-bold text-[#e0d4ff] flex items-center justify-center gap-2 transition-all hover:border-[#ff2d95] hover:text-[#ff2d95] hover:-translate-y-0.5 hover:shadow-[4px_4px_0_0_#ff2d95] disabled:opacity-50"
+                >
+                  <Heart className={cn("w-4 h-4 transition-colors", isBookmarked ? "fill-[#ff2d95] text-[#ff2d95]" : "text-[#ff2d95]")} />
+                  {isBookmarked ? "Saved in Collection" : "Add to Collection"}
                 </button>
 
                 <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-[rgba(180,120,255,0.1)]">

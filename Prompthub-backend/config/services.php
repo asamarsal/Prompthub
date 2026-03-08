@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'pinata' => [
+        'jwt' => env('PINATA_JWT'),
+        'gateway' => env('PINATA_GATEWAY', 'https://gateway.pinata.cloud/ipfs/'),
+        'group_id' => env('PINATA_GROUP_ID'),
+    ],
+
 ];

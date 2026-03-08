@@ -38,4 +38,9 @@ class Prompt extends Model
         'royalty_percentage' => 'integer',
         'total_sold' => 'integer'
     ];
+
+    public function bookmarkedBy()
+    {
+        return $this->belongsToMany(User::class, 'bookmarks', 'prompt_id', 'user_id')->withTimestamps();
+    }
 }

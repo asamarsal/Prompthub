@@ -28,6 +28,12 @@ class AuthController extends Controller
         return response()->json($request->user());
     }
 
+    public function show($address)
+    {
+        $user = User::where('stx_address', $address)->firstOrFail();
+        return response()->json($user);
+    }
+
     public function update(Request $request)
     {
         $user = $request->user();

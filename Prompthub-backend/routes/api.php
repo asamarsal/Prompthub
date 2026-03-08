@@ -12,7 +12,10 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\AiModelController;
 
+use App\Http\Controllers\BookmarkController;
+
 Route::post('/auth/login', [AuthController::class, 'login']);
+Route::get('/users/{address}', [AuthController::class, 'show']);
 
 // Public routes
 Route::get('/prompts', [PromptController::class, 'index']);
@@ -27,6 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Users
     Route::get('/users/me', [AuthController::class, 'me']);
     Route::put('/users/me', [AuthController::class, 'update']);
+    Route::post('/users/upload', [\App\Http\Controllers\FileController::class, 'uploadToIpfs']);
     
     // Taxonomy
     Route::post('/categories', [CategoryController::class, 'store']);
@@ -56,4 +60,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::put('/notifications/read', [NotificationController::class, 'markAsRead']);
+
+    // Bookmarks
+    Route::get('/users/me/bookmarks', [BookmarkController::class, 'index']);
+    Route::post('/prompts/{id}/bookmark', [BookmarkController::class, 'toggle']);
 });

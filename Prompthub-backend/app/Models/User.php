@@ -28,4 +28,14 @@ class User extends Authenticatable
             'roles' => 'array',
         ];
     }
+
+    public function bookmarks()
+    {
+        return $this->hasMany(Bookmark::class);
+    }
+
+    public function bookmarkedPrompts()
+    {
+        return $this->belongsToMany(Prompt::class, 'bookmarks', 'user_id', 'prompt_id')->withTimestamps();
+    }
 }

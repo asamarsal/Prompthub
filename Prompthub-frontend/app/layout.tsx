@@ -7,6 +7,8 @@ import './globals.css'
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-sans" });
 const oxanium = Oxanium({ subsets: ["latin"], variable: "--font-display" });
 
+import { WalletProvider } from '@/lib/wallet-context'
+
 export const metadata: Metadata = {
   title: 'PrompHub // Dapps on Stacks',
   description: 'Buy, sell, and trade AI prompts on Bitcoin. Marketplace powered by the Stacks network.',
@@ -44,7 +46,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.variable} ${oxanium.variable} font-sans antialiased overflow-x-hidden`}>
-        {children}
+        <WalletProvider>
+          {children}
+        </WalletProvider>
         <Toaster theme="dark" />
         <Analytics />
       </body>

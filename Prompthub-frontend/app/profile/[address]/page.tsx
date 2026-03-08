@@ -1,15 +1,17 @@
 "use client"
 
 import { AppShell } from "@/components/app-shell"
-import { useWallet, truncateAddress, ROLE_LABELS, ROLE_ICONS, type UserRole } from "@/lib/wallet-context"
+import { useWallet, truncateAddress, ROLE_LABELS, ROLE_ICONS, type UserRole, type UserProfile } from "@/lib/wallet-context"
 import { artists } from "@/lib/mock-artists"
 import { contests } from "@/lib/mock-contests"
 import { prompts } from "@/lib/mock-data"
 import Link from "next/link"
 import { use, useState, useEffect } from "react"
-import { Star, BadgeCheck, Trophy, ShoppingBag, Copy, Check, Palette, User, Award, Clock, TrendingUp } from "lucide-react"
+import { Star, BadgeCheck, Trophy, ShoppingBag, Copy, Check, Palette, User, Award, Clock, TrendingUp, Heart } from "lucide-react"
 import { RoleOnboardingModal } from "@/components/role-onboarding-modal"
 import { EditProfileModal } from "@/components/edit-profile-modal"
+import { fetchUserByAddress, fetchBookmarks, type ApiUser } from "@/lib/api"
+import { PromptCard } from "@/components/prompt-card"
 
 const roleDescriptions: Record<UserRole, string> = {
     artist: "AI Creator — selling prompts, competing in brand contests, taking on hire projects.",
@@ -37,7 +39,7 @@ function CopyBtn({ text }: { text: string }) {
     )
 }
 
-type Tab = "overview" | "portfolio" | "prompts" | "reviews" | "contests"
+type Tab = "overview" | "portfolio" | "prompts" | "reviews" | "contests" | "saved"
 
 export default function ProfilePage({ params }: { params: Promise<{ address: string }> }) {
     const { address: paramAddress } = use(params)
@@ -57,21 +59,70 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
         }
     }, [mounted, currentAddress])
 
-    const isOwn = isInitialized && isConnected && currentAddress.length > 0 && currentAddress.toLowerCase() === decodedAddress.toLowerCase()
+    // Strip network prefix (SP or ST) for comparison to handle network toggle mismatches
+    const normalize = (addr: string) => addr.trim().toLowerCase().replace(/^(sp|st)/, "")
+    const isOwn = isInitialized && isConnected && currentAddress.length > 0 && (
+        normalize(currentAddress) === normalize(decodedAddress)
+    )
 
     // Debugging logic
     useEffect(() => {
         if (mounted) {
-            console.log("Profile Page Debug:")
-            console.log("param", paramAddress)
-            console.log("decoded", decodedAddress)
-            console.log("myAddress", myAddress)
-            console.log("isOwn", isOwn)
+            console.log("Profile Page Debug:");
+            console.log("- Param Address:", paramAddress);
+            console.log("- Decoded Address:", decodedAddress);
+            console.log("- My Address (from Context):", myAddress);
+            console.log("- Is Connected:", isConnected);
+            console.log("- Is Own:", isOwn);
+            console.log("- User Profile Name:", profile?.name);
         }
-    }, [mounted, paramAddress, decodedAddress, myAddress, isOwn])
+    }, [mounted, paramAddress, decodedAddress, myAddress, isConnected, isOwn, profile])
 
     const [activeTab, setActiveTab] = useState<Tab>("overview")
+    const [savedPrompts, setSavedPrompts] = useState<any[]>([])
+    const [savedLoading, setSavedLoading] = useState(false)
     const [showEditProfile, setShowEditProfile] = useState(false)
+    const [editView, setEditView] = useState<"info" | "avatar" | "cover">("info")
+    const [fetchedProfile, setFetchedProfile] = useState<UserProfile | null>(null)
+    const [isLoading, setIsLoading] = useState(false)
+
+    // Fetch public profile if viewing someone else
+    useEffect(() => {
+        if (mounted && !isOwn && decodedAddress) {
+            setIsLoading(true)
+            fetchUserByAddress(decodedAddress)
+                .then(user => {
+                    setFetchedProfile({
+                        name: user.name ?? "",
+                        bio: user.bio ?? "",
+                        avatar: "",
+                        avatarUrl: user.avatar_url ?? "",
+                        coverImage: user.cover_url ?? "",
+                        roles: (user.roles as UserRole[]) ?? [],
+                        activeRole: (user.roles as UserRole[])?.[0] ?? "buyer",
+                    })
+                })
+                .catch(err => {
+                    console.error("Failed to fetch profile:", err)
+                    setFetchedProfile(null)
+                })
+                .finally(() => setIsLoading(false))
+        }
+    }, [mounted, isOwn, decodedAddress])
+
+    // Fetch bookmarks when entering "saved" tab
+    useEffect(() => {
+        if (activeTab === "saved" && isOwn && isConnected) {
+            setSavedLoading(true)
+            fetchBookmarks()
+                .then(data => {
+                    // Logic to extract data from paginated response
+                    setSavedPrompts(data.data || [])
+                })
+                .catch(err => console.error(err))
+                .finally(() => setSavedLoading(false))
+        }
+    }, [activeTab, isOwn, isConnected])
 
     // Wait until hydration is complete to avoid flashing mock data
     if (!isInitialized) {
@@ -86,18 +137,22 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
         )
     }
 
-    // Use own profile data if own page, else sample data
-    const displayProfile = isOwn ? profile : {
-        name: "Yuki Tanaka",
-        bio: "Specialist in cinematic photorealistic AI art. I bring brands to life through hyper-detailed visuals crafted with Midjourney and Stable Diffusion. Available for hire.",
-        roles: ["artist"] as UserRole[],
-        activeRole: "artist" as UserRole,
+    // Use own profile data if own page, else empty data (no more Yuki fallback)
+    const displayProfile = isOwn ? profile : (fetchedProfile || {
+        name: "",
+        bio: "",
+        roles: [] as UserRole[],
+        activeRole: "buyer" as UserRole,
         avatar: "",
-    }
+        avatarUrl: "",
+        coverImage: "",
+    })
 
-    const displayName = isOwn ? (profile.name || "New User") : displayProfile.name
+    // Determine what name to show. Priority: Profile > Truncated Address > "Unknown User"
+    const displayName = isOwn
+        ? (profile.name || (currentAddress ? truncateAddress(currentAddress) : "New User"))
+        : (displayProfile.name || (decodedAddress ? truncateAddress(decodedAddress) : "Unknown User"))
 
-    const artist = artists[0] // mock artist data
     const accent = roleAccent[displayProfile.activeRole] || "#a855f7"
     const coverPreview = isOwn ? (profile.coverImage || "") : ""
     const avatarPreview = isOwn ? (profile.avatarUrl || "") : ""
@@ -107,16 +162,31 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
         { id: "overview", label: "Overview" },
         ...(displayProfile.roles.includes("artist") ? [{ id: "portfolio" as Tab, label: "Portfolio" }] : []),
         { id: "prompts", label: "Prompts" },
+        ...(isOwn ? [{ id: "saved" as Tab, label: "Saved" }] : []),
         ...(displayProfile.roles.includes("brand") ? [{ id: "contests" as Tab, label: "Contests" }] : []),
         { id: "reviews", label: "Reviews" },
     ]
+
+    // Stats logic
+    const mockArtist = artists[0]
+    const isArtist = displayProfile.roles.includes("artist")
+    const rating = isArtist ? (isOwn ? "—" : mockArtist.rating) : "0"
+    const projects = isArtist ? (isOwn ? "0" : mockArtist.completedProjects) : "0"
+    const reviews = isArtist ? (isOwn ? "0" : mockArtist.reviews) : "0"
+    const sold = isArtist ? (isOwn ? "0" : "0") : "0"
 
     return (
         <AppShell>
             <div className="min-h-screen pb-20">
                 {/* Cover banner */}
                 <div
-                    className="w-full h-40 md:h-52 relative overflow-hidden"
+                    className={`w-full aspect-[3/1] max-h-[240px] relative overflow-hidden ${isOwn ? "cursor-pointer group" : ""}`}
+                    onClick={() => {
+                        if (isOwn) {
+                            setEditView("cover")
+                            setShowEditProfile(true)
+                        }
+                    }}
                     style={coverPreview
                         ? { backgroundImage: `url(${coverPreview})`, backgroundSize: "cover", backgroundPosition: "center" }
                         : { background: `linear-gradient(135deg, #080808 0%, ${accent}22 60%, ${accent}44 100%)` }}
@@ -124,19 +194,37 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
                     <div className="absolute inset-0 opacity-10" style={{
                         backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 39px, ${accent}40 40px), repeating-linear-gradient(90deg, transparent, transparent 39px, ${accent}40 40px)`,
                     }} />
+                    {isOwn && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="bg-black/60 px-4 py-2 border border-white/20 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                                📷 Change Cover
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="max-w-5xl mx-auto px-4 lg:px-8">
                     {/* Profile header — overlaps banner */}
                     <div className="flex flex-col md:flex-row gap-5 items-start -mt-14 mb-8 relative z-10">
                         <div
-                            className="w-28 h-28 rounded-full flex items-center justify-center text-4xl font-black text-white shrink-0 border-4 border-[#0a0a0c] overflow-hidden"
+                            className={`w-28 h-28 rounded-full flex items-center justify-center text-4xl font-black text-white shrink-0 border-4 border-[#0a0a0c] overflow-hidden relative ${isOwn ? "cursor-pointer group" : ""}`}
+                            onClick={() => {
+                                if (isOwn) {
+                                    setEditView("avatar")
+                                    setShowEditProfile(true)
+                                }
+                            }}
                             style={avatarPreview
                                 ? { backgroundImage: `url(${avatarPreview})`, backgroundSize: "cover", backgroundPosition: "center" }
                                 : { background: `linear-gradient(135deg, ${accent}, #a855f7)` }
                             }
                         >
                             {!avatarPreview && (displayName[0].toUpperCase())}
+                            {isOwn && (
+                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span className="text-[10px] font-bold uppercase">Edit</span>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex-1 mt-14 md:mt-16">
@@ -157,7 +245,7 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
 
                             {/* Role badges */}
                             <div className="flex flex-wrap gap-2">
-                                {displayProfile.roles.map(r => (
+                                {displayProfile.roles.map((r: UserRole) => (
                                     <span
                                         key={r}
                                         className="text-[11px] font-bold px-3 py-1 border uppercase tracking-wide"
@@ -177,7 +265,10 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
                         <div className="flex gap-3 mt-16 shrink-0">
                             {isOwn ? (
                                 <button
-                                    onClick={() => setShowEditProfile(true)}
+                                    onClick={() => {
+                                        setEditView("info")
+                                        setShowEditProfile(true)
+                                    }}
                                     className="px-5 py-2.5 text-sm font-bold uppercase border border-[#2a2a30] text-white/60 hover:border-[#a855f7] hover:text-white transition-all tracking-wider"
                                 >
                                     ✏️ Edit Profile
@@ -186,7 +277,7 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
                                 <>
                                     {displayProfile.roles.includes("artist") && (
                                         <Link
-                                            href={`/hire/${artist.id}`}
+                                            href={`/hire/${mockArtist.id}`}
                                             className="px-5 py-2.5 text-sm font-bold uppercase border-2 text-white tracking-wider transition-all hover:-translate-y-0.5"
                                             style={{ borderColor: accent, boxShadow: `4px 4px 0 0 ${accent}`, background: `${accent}20` }}
                                         >
@@ -203,26 +294,6 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
                         <p className="text-sm text-white/60 leading-relaxed max-w-2xl mb-8">{displayProfile.bio}</p>
                     )}
 
-                    {/* Stats row */}
-                    <div
-                        className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 p-4 border"
-                        style={{ borderColor: `${accent}30`, background: `${accent}06` }}
-                    >
-                        {[
-                            { icon: <Star className="w-4 h-4" />, label: "Rating", value: displayProfile.roles.includes("artist") ? artist.rating : "—", color: "#ff2d95" },
-                            { icon: <Award className="w-4 h-4" />, label: "Projects", value: displayProfile.roles.includes("artist") ? artist.completedProjects : "—", color: "#b4ff39" },
-                            { icon: <TrendingUp className="w-4 h-4" />, label: "Reviews", value: displayProfile.roles.includes("artist") ? artist.reviews : "—", color: "#00ffff" },
-                            { icon: <Palette className="w-4 h-4" />, label: "Prompts Sold", value: displayProfile.roles.includes("artist") ? 12 : "—", color: "#a855f7" },
-                        ].map(s => (
-                            <div key={s.label} className="text-center">
-                                <div className="flex items-center justify-center gap-1.5 mb-1" style={{ color: s.color }}>
-                                    {s.icon}
-                                </div>
-                                <div className="text-2xl font-extrabold text-white">{s.value}</div>
-                                <div className="text-[11px] text-white/30 uppercase tracking-wider">{s.label}</div>
-                            </div>
-                        ))}
-                    </div>
 
                     {/* Tabs */}
                     <div className="flex border-b border-[#2a2a30] mb-8 overflow-x-auto">
@@ -245,63 +316,86 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
 
                     {/* OVERVIEW */}
                     {activeTab === "overview" && (
-                        <div className="grid md:grid-cols-2 gap-8">
-                            {/* About */}
-                            <div className="flex flex-col gap-4">
-                                <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider">About</h3>
-                                <p className="text-sm text-white/60 leading-relaxed">
-                                    {displayProfile.bio || "No bio yet."}
-                                </p>
+                        <div className="grid lg:grid-cols-[280px_1fr] gap-10">
+                            {/* Left Sidebar: Stats & Skills */}
+                            <div className="flex flex-col gap-8">
+                                <div className="flex flex-col gap-4 p-5 border bg-white/[0.02]" style={{ borderColor: `${accent}20` }}>
+                                    {[
+                                        { icon: <Star className="w-4 h-4" />, label: "Rating", value: rating, color: "#ff2d95" },
+                                        { icon: <Award className="w-4 h-4" />, label: "Projects", value: projects, color: "#b4ff39" },
+                                        { icon: <TrendingUp className="w-4 h-4" />, label: "Reviews", value: reviews, color: "#00ffff" },
+                                        { icon: <Palette className="w-4 h-4" />, label: "Prompts Sold", value: sold, color: "#a855f7" },
+                                    ].map(s => (
+                                        <div key={s.label} className="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
+                                            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0" style={{ color: s.color }}>
+                                                {s.icon}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="text-lg font-black text-white leading-none">{s.value}</div>
+                                                <div className="text-[9px] text-white/40 uppercase tracking-widest font-bold mt-0.5">{s.label}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
 
                                 {displayProfile.roles.includes("artist") && (
-                                    <>
+                                    <div className="flex flex-col gap-6">
                                         <div>
                                             <p className="text-xs text-white/30 uppercase tracking-wider mb-2">Specialties</p>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {artist.specialties.map(s => (
-                                                    <span key={s} className="text-[11px] font-mono px-2 py-0.5 bg-[#ff2d95]/10 border border-[#ff2d95]/25 text-[#ff2d95] uppercase">{s}</span>
+                                                {mockArtist.specialties.map((s: string) => (
+                                                    <span key={s} className="text-[10px] font-mono px-2 py-0.5 bg-[#ff2d95]/10 border border-[#ff2d95]/25 text-[#ff2d95] uppercase">{s}</span>
                                                 ))}
                                             </div>
                                         </div>
                                         <div>
                                             <p className="text-xs text-white/30 uppercase tracking-wider mb-2">AI Tools</p>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {artist.tools.map(t => (
-                                                    <span key={t} className="text-[11px] font-mono px-2 py-0.5 bg-[#00ffff]/10 border border-[#00ffff]/25 text-[#00ffff] uppercase">{t}</span>
+                                                {mockArtist.tools.map((t: string) => (
+                                                    <span key={t} className="text-[10px] font-mono px-2 py-0.5 bg-[#00ffff]/10 border border-[#00ffff]/25 text-[#00ffff] uppercase">{t}</span>
                                                 ))}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3 p-3 border border-[#2a2a30]">
-                                            <span className={`w-2 h-2 rounded-full ${artist.available ? "bg-[#b4ff39]" : "bg-white/20"}`} />
-                                            <span className={`text-sm font-bold ${artist.available ? "text-[#b4ff39]" : "text-white/30"}`}>
-                                                {artist.available ? "Available for hire" : "Currently busy"}
+                                        <div className="flex items-center gap-3 p-4 border border-[#2a2a30] bg-white/[0.02]">
+                                            <span className={`w-2 h-2 rounded-full ${mockArtist.available ? "bg-[#b4ff39]" : "bg-white/20"}`} />
+                                            <span className={`text-xs font-bold ${mockArtist.available ? "text-[#b4ff39]" : "text-white/30"}`}>
+                                                {mockArtist.available ? "Available" : "Busy"}
                                             </span>
-                                            <span className="ml-auto text-xs font-mono text-[#00ffff]">{artist.hourlyRate} sBTC/hr</span>
+                                            <span className="ml-auto text-xs font-mono text-[#00ffff]">{mockArtist.hourlyRate} $/hr</span>
                                         </div>
-                                    </>
+                                    </div>
                                 )}
                             </div>
 
-                            {/* Recent activity */}
-                            <div>
-                                <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider mb-4">Recent Activity</h3>
-                                <div className="flex flex-col gap-3">
-                                    {[
-                                        { icon: "🏆", text: "Won 1st place in Neon Horizon contest", time: "2 days ago", color: "#ff2d95" },
-                                        { icon: "📦", text: "Published a new prompt: Fantasy Landscape v3", time: "5 days ago", color: "#a855f7" },
-                                        { icon: "⭐", text: "Received a 5-star review from DreamDAO", time: "1 week ago", color: "#00ffff" },
-                                        { icon: "💼", text: "Completed project for StacksBrew Coffee", time: "2 weeks ago", color: "#b4ff39" },
-                                    ].map((a, i) => (
-                                        <div key={i} className="flex items-start gap-3 p-3 border border-[#2a2a30] hover:border-[#2a2a30] transition-colors">
-                                            <span className="text-lg leading-none mt-0.5">{a.icon}</span>
-                                            <div className="flex-1">
-                                                <p className="text-sm text-white/70">{a.text}</p>
-                                                <p className="text-[11px] text-white/30 mt-0.5 flex items-center gap-1">
-                                                    <Clock className="w-3 h-3" /> {a.time}
-                                                </p>
+                            {/* Main Content: Bio & Activity */}
+                            <div className="flex flex-col gap-10">
+                                <div>
+                                    <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider mb-4">About {displayName}</h3>
+                                    <p className="text-sm md:text-base text-white/70 leading-relaxed">
+                                        {displayProfile.bio || "No bio yet."}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider mb-4">Recent Activity</h3>
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        {[
+                                            { icon: "🏆", text: "Won 1st place in Neon Horizon contest", time: "2 days ago", color: "#ff2d95" },
+                                            { icon: "📦", text: "Published a new prompt: Fantasy Landscape v3", time: "5 days ago", color: "#a855f7" },
+                                            { icon: "⭐", text: "Received a 5-star review from DreamDAO", time: "1 week ago", color: "#00ffff" },
+                                            { icon: "💼", text: "Completed project for StacksBrew Coffee", time: "2 weeks ago", color: "#b4ff39" },
+                                        ].map((a, i) => (
+                                            <div key={i} className="flex items-start gap-4 p-4 border border-[#2a2a30] hover:border-white/10 bg-white/[0.01] transition-colors group">
+                                                <span className="text-xl leading-none group-hover:scale-110 transition-transform">{a.icon}</span>
+                                                <div className="flex-1">
+                                                    <p className="text-sm text-white/70 line-clamp-2">{a.text}</p>
+                                                    <p className="text-[10px] text-white/30 mt-1 flex items-center gap-1 uppercase tracking-tight font-bold">
+                                                        <Clock className="w-3 h-3" /> {a.time}
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -312,7 +406,7 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
                         <div>
                             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                                 {/* Artist's own portfolio items + extra mocks */}
-                                {[...artist.portfolio, ...artist.portfolio].map((item, i) => (
+                                {[...(mockArtist.portfolio || []), ...(mockArtist.portfolio || [])].map((item: any, i: number) => (
                                     <div key={i} className="group border border-[#2a2a30] hover:border-[#ff2d95] transition-all overflow-hidden bg-[#0d0d0d]">
                                         <div className="relative h-52 overflow-hidden">
                                             <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -358,7 +452,38 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
                         </div>
                     )}
 
-                    {/* CONTESTS */}
+                    {/* SAVED (Wishlist) */}
+                    {activeTab === "saved" && (
+                        <div>
+                            {savedLoading ? (
+                                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="h-[420px] bg-white/[0.02] border border-[#2a2a30]" />
+                                    ))}
+                                </div>
+                            ) : savedPrompts.length > 0 ? (
+                                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {savedPrompts.map((p: any) => (
+                                        <PromptCard key={p.id} prompt={p} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-20 border-2 border-dashed border-[#2a2a30] bg-white/[0.01]">
+                                    <Heart className="w-10 h-10 mx-auto mb-4 text-white/20" />
+                                    <h3 className="text-lg font-bold text-white uppercase tracking-wider">Your collection is empty</h3>
+                                    <p className="text-white/40 text-sm mt-2 max-w-xs mx-auto">
+                                        Save interesting prompts while browsing the marketplace to see them here.
+                                    </p>
+                                    <Link
+                                        href="/marketplace"
+                                        className="inline-block mt-6 px-6 py-2 bg-white/5 border border-white/10 hover:border-[#ff2d95] hover:text-[#ff2d95] transition-all text-xs font-bold uppercase tracking-widest"
+                                    >
+                                        Browse Marketplace
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                    )}
                     {activeTab === "contests" && (
                         <div className="flex flex-col gap-4">
                             {contests.slice(0, 3).map(c => (
@@ -412,8 +537,29 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
                 </div>
             </div>
 
+            {/* Debug panel (hidden unless ?debug=1) */}
+            {typeof window !== 'undefined' && window.location.search.includes('debug=1') && (
+                <div className="fixed bottom-4 right-4 z-[9999] bg-black/90 border-2 border-primary p-4 text-[10px] font-mono text-primary max-w-xs shadow-2xl">
+                    <p className="font-bold border-b border-primary/30 mb-2 uppercase">Profile Diagnostic</p>
+                    <div className="grid grid-cols-[80px_1fr] gap-x-2 gap-y-1">
+                        <span>Param:</span> <span className="text-white break-all">{paramAddress || "null"}</span>
+                        <span>MyAddr:</span> <span className="text-white break-all">{myAddress || "null"}</span>
+                        <span>NormalP:</span> <span className="text-white break-all">{normalize(paramAddress || "")}</span>
+                        <span>NormalM:</span> <span className="text-white break-all">{normalize(myAddress || "")}</span>
+                        <span>Conn:</span> <span className={isConnected ? "text-green-400" : "text-red-400"}>{isConnected ? "YES" : "NO"}</span>
+                        <span>Own:</span> <span className={isOwn ? "text-green-400" : "text-red-400"}>{isOwn ? "YES" : "NO"}</span>
+                        <span>Init:</span> <span>{isInitialized ? "YES" : "NO"}</span>
+                    </div>
+                </div>
+            )}
+
             {/* Edit Profile modal */}
-            <EditProfileModal open={showEditProfile} onClose={() => setShowEditProfile(false)} />
+            <EditProfileModal
+                open={showEditProfile}
+                onClose={() => setShowEditProfile(false)}
+                view={editView}
+                accentColor={accent}
+            />
             <RoleOnboardingModal open={false} onClose={() => { }} />
         </AppShell>
     )
