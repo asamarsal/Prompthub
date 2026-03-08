@@ -26,7 +26,8 @@ class Prompt extends Model
         'royalty_percentage',
         'is_published',
         'is_curated',
-        'total_sold'
+        'total_sold',
+        'original_content'
     ];
 
     protected $casts = [

@@ -4,9 +4,36 @@
  * Base URL is read from NEXT_PUBLIC_API_URL env var (default: http://localhost:8000).
  */
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+import axios from "axios"
+import { wrapAxiosWithPayment } from "x402-stacks"
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 const TOKEN_KEY = "prompthub_api_token"
+
+// Standard Axios instance for x402 protected routes
+const x402Api = axios.create({
+    baseURL: BASE_URL,
+    headers: {
+        Accept: "application/json",
+    },
+})
+
+// Add Auth Token to Axios
+x402Api.interceptors.request.use((config) => {
+    const token = getApiToken()
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+})
+
+/**
+ * Creates or returns a wrapped Axios instance for x402 payments.
+ * @param account The Stacks Account object (must have address and signTransaction)
+ */
+export function getX402Client(account: any) {
+    return wrapAxiosWithPayment(x402Api, account as any)
+}
 
 export function getApiToken(): string | null {
     if (typeof window === "undefined") return null
@@ -165,4 +192,14 @@ export async function toggleBookmark(promptId: string | number): Promise<Bookmar
  */
 export async function fetchBookmarks(): Promise<any> {
     return request<any>("/api/users/me/bookmarks")
+}
+
+/**
+ * GET /api/prompts/{id}/content
+ * Returns the premium content of a prompt. Protected by x402.
+ */
+export async function fetchPremiumContent(promptId: string | number, account: any): Promise<{ original_content: string }> {
+    const client = getX402Client(account)
+    const res = await client.get(`/api/prompts/${promptId}/content`)
+    return res.data
 }

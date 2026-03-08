@@ -133,4 +133,13 @@ class PromptController extends Controller
         
         return response()->json($prompt);
     }
+
+    public function getContent($id)
+    {
+        $prompt = Prompt::findOrFail($id);
+        return response()->json([
+            'id' => $prompt->id,
+            'original_content' => $prompt->original_content ?? 'This is the premium prompt content protected by x402.'
+        ]);
+    }
 }

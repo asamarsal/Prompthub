@@ -15,7 +15,6 @@ use App\Http\Controllers\AiModelController;
 use App\Http\Controllers\BookmarkController;
 
 Route::post('/auth/login', [AuthController::class, 'login']);
-Route::get('/users/{address}', [AuthController::class, 'show']);
 
 // Public routes
 Route::get('/prompts', [PromptController::class, 'index']);
@@ -40,6 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/prompts', [PromptController::class, 'store']);
     Route::post('/prompts/{id}/verify-purchase', [PromptController::class, 'verifyPurchase']);
     Route::put('/prompts/{id}/curate', [PromptController::class, 'curate']);
+    Route::get('/prompts/{id}/content', [PromptController::class, 'getContent'])->middleware('x402');
 
     // Contests
     Route::post('/contests', [ContestController::class, 'store']);
@@ -65,3 +65,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/me/bookmarks', [BookmarkController::class, 'index']);
     Route::post('/prompts/{id}/bookmark', [BookmarkController::class, 'toggle']);
 });
+
+Route::get('/users/{address}', [AuthController::class, 'show']);

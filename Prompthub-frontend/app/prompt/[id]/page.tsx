@@ -6,8 +6,10 @@ import { AppShell } from "@/components/app-shell"
 import { PromptCard } from "@/components/prompt-card"
 import { PurchaseModal } from "@/components/purchase-modal"
 import { prompts } from "@/lib/mock-data"
-import { ChevronRight, Check, Copy, Heart, MessageSquare, Share2, Star, ShieldCheck, Download, ExternalLink, Zap, Lock, BadgeCheck, Clock } from "lucide-react"
-import { toggleBookmark } from "@/lib/api"
+import { ChevronRight, Check, Copy, Heart, MessageSquare, Share2, Star, ShieldCheck, Download, ExternalLink, Zap, Lock, BadgeCheck, Clock, Eye, Unlock } from "lucide-react"
+import { toggleBookmark, fetchPremiumContent } from "@/lib/api"
+import { useWallet } from "@/lib/wallet-context"
+import { openSTXTransfer } from "@stacks/connect"
 import { cn } from "@/lib/utils"
 
 const mockReviews = [
@@ -26,10 +28,15 @@ const mockTxHistory = [
 export default function PromptDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const prompt = prompts.find((p) => p.id === Number(id))
+  const { isConnected, address } = useWallet()
+
   const [purchaseOpen, setPurchaseOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<"description" | "reviews" | "history">("description")
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [bookmarkLoading, setBookmarkLoading] = useState(false)
+
+  const [premiumContent, setPremiumContent] = useState<string | null>(null)
+  const [unlockLoading, setUnlockLoading] = useState(false)
 
   const handleToggleBookmark = async () => {
     if (bookmarkLoading || !prompt) return
@@ -41,6 +48,36 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
       console.error(err)
     } finally {
       setBookmarkLoading(false)
+    }
+  }
+
+  const handleUnlock = async () => {
+    if (!prompt || !isConnected || !address) return
+
+    setUnlockLoading(true)
+    try {
+      // Adapter for x402-stacks interceptor
+      const account = {
+        address: address,
+        signTransaction: async (tx: any) => {
+          return new Promise((resolve, reject) => {
+            openSTXTransfer({
+              recipient: tx.recipient,
+              amount: tx.amount,
+              memo: tx.memo,
+              onFinish: (data) => resolve(data.txId),
+              onCancel: () => reject(new Error("Payment canceled")),
+            })
+          })
+        }
+      }
+
+      const res = await fetchPremiumContent(prompt.id, account)
+      setPremiumContent(res.original_content)
+    } catch (err: any) {
+      console.error("Unlock failed:", err)
+    } finally {
+      setUnlockLoading(false)
     }
   }
 
@@ -118,8 +155,78 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
 
               <div className="mt-6" role="tabpanel">
                 {activeTab === "description" && (
-                  <div>
-                    <p className="text-[#a78bfa] leading-relaxed">{prompt.description}</p>
+                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <div>
+                      <h3 className="text-xs font-mono font-bold text-[#a78bfa]/50 uppercase tracking-[0.2em] mb-3">Model Description</h3>
+                      <p className="text-[#e0d4ff]/90 leading-relaxed text-lg">{prompt.description}</p>
+                    </div>
+
+                    {/* x402 Premium Content Section */}
+                    <div className="relative group border-2 border-[#2a2a30] bg-[#160f24]/40 p-8 overflow-hidden transition-all hover:border-[#ff2d95]/30">
+                      {!premiumContent ? (
+                        <div className="text-center relative z-10">
+                          <div className="w-16 h-16 bg-[#ff2d95]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#ff2d95]/20 group-hover:scale-110 transition-transform">
+                            <Lock className="w-8 h-8 text-[#ff2d95]" />
+                          </div>
+                          <h4 className="text-lg font-black text-white uppercase tracking-tighter mb-2">Premium Prompt Content</h4>
+                          <p className="text-sm text-[#a78bfa]/70 mb-8 max-w-sm mx-auto leading-relaxed">
+                            Unlock the precise prompt string, seed values, and negative parameters using the <span className="text-[#ff2d95] font-bold">x402 protocol</span>.
+                          </p>
+                          <button
+                            onClick={handleUnlock}
+                            disabled={unlockLoading || !isConnected}
+                            className="bg-transparent border-2 border-[#ff2d95] text-[#ff2d95] px-8 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all hover:bg-[#ff2d95] hover:text-white hover:shadow-[0_0_20px_0_rgba(255,45,149,0.3)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#ff2d95] disabled:hover:shadow-none"
+                          >
+                            {unlockLoading ? (
+                              <span className="flex items-center gap-2">
+                                <Zap className="w-4 h-4 animate-spin" /> Verifying Payment...
+                              </span>
+                            ) : isConnected ? (
+                              "Unlock for 5 STX (x402)"
+                            ) : (
+                              "Connect Wallet to Access"
+                            )}
+                          </button>
+                          <p className="mt-4 text-[10px] text-[#a78bfa]/40 font-mono uppercase tracking-widest">Powered by x402-stacks</p>
+                        </div>
+                      ) : (
+                        <div className="animate-in zoom-in-95 fade-in duration-500 relative z-10">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2 text-[#b4ff39]">
+                              <Unlock className="w-4 h-4" />
+                              <span className="text-xs font-black uppercase tracking-widest">Content Decrypted</span>
+                            </div>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(premiumContent);
+                                // Optional: add toast
+                              }}
+                              className="text-[10px] text-[#a78bfa] hover:text-[#b4ff39] transition-colors flex items-center gap-1 font-bold uppercase"
+                            >
+                              <Copy className="w-3 h-3" /> Copy
+                            </button>
+                          </div>
+                          <div className="p-6 bg-black/60 border border-[#b4ff39]/30 rounded font-mono text-sm text-[#b4ff39] break-all leading-relaxed shadow-inner">
+                            {premiumContent}
+                          </div>
+                          <div className="mt-4 flex gap-4">
+                            <div className="flex-1 p-3 bg-white/5 border border-white/10 rounded">
+                              <p className="text-[10px] text-white/30 uppercase font-mono mb-1">Method</p>
+                              <p className="text-xs font-bold text-white">x402 Protocol V2</p>
+                            </div>
+                            <div className="flex-1 p-3 bg-white/5 border border-white/10 rounded">
+                              <p className="text-[10px] text-white/30 uppercase font-mono mb-1">Status</p>
+                              <p className="text-xs font-bold text-[#b4ff39]">Verified On-chain</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Decorative elements */}
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-[#ff2d95]/5 blur-3xl rounded-full -mr-16 -mt-16" />
+                      <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#00ffff]/5 blur-3xl rounded-full -ml-16 -mb-16" />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4 mt-6">
                       {[
                         { label: "AI Model", value: prompt.model },
