@@ -33,7 +33,9 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Taxonomy
     Route::post('/categories', [CategoryController::class, 'store']);
+    Route::put('/categories/{id}', [CategoryController::class, 'update']);
     Route::post('/ai-models', [AiModelController::class, 'store']);
+    Route::put('/ai-models/{id}', [AiModelController::class, 'update']);
     
     // Prompts
     Route::post('/prompts', [PromptController::class, 'store']);

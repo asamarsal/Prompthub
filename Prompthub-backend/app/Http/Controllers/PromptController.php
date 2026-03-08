@@ -95,7 +95,7 @@ class PromptController extends Controller
             'ai_model' => 'nullable|string',
             'category' => 'nullable|string',
             'tags' => 'nullable|array',
-            'content_type' => 'required|string|in:TEXT,IMAGE,VIDEO',
+            'content_type' => 'required|string|in:TEXT,IMAGE,VIDEO,AUDIO,CODE',
             'is_nsfw' => 'boolean',
             'license_type' => 'required|string|in:FREE,COMMERCIAL,EXCLUSIVE',
             'royalty_percentage' => 'nullable|integer|min:0|max:100',

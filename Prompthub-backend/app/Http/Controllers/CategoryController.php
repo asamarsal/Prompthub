@@ -24,4 +24,20 @@ class CategoryController extends Controller
 
         return response()->json($category, 201);
     }
+
+    public function update(Request $request, $id)
+    {
+        $category = \App\Models\Category::findOrFail($id);
+
+        $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'slug' => 'sometimes|required|string|max:255|unique:categories,slug,' . $id,
+            'description' => 'nullable|string',
+            'type' => 'sometimes|required|string|in:CURATED,COMMUNITY',
+        ]);
+
+        $category->update($request->only('name', 'slug', 'description', 'type'));
+
+        return response()->json($category);
+    }
 }
