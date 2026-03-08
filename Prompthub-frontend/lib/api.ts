@@ -203,3 +203,30 @@ export async function fetchPremiumContent(promptId: string | number, account: an
     const res = await client.get(`/api/prompts/${promptId}/content`)
     return res.data
 }
+
+// ─── Prompts ────────────────────────────────────────────────────────────
+
+export interface PaginatedResponse<T> {
+    data: T[];
+    current_page: number;
+    last_page: number;
+    total: number;
+}
+
+/**
+ * GET /api/prompts
+ * Fetches a paginated list of prompts with optional filters.
+ */
+export async function getPrompts(params?: Record<string, string>): Promise<PaginatedResponse<any>> {
+    const qs = params ? new URLSearchParams(params).toString() : '';
+    const url = `/api/prompts${qs ? `?${qs}` : ''}`;
+    return request<PaginatedResponse<any>>(url);
+}
+
+/**
+ * GET /api/prompts/{id}
+ * Fetches details of a single prompt by its ID.
+ */
+export async function getPrompt(id: string): Promise<any> {
+    return request<any>(`/api/prompts/${id}`);
+}

@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('ai_model')->nullable();
             $table->string('category')->nullable();
             $table->json('tags')->nullable();
-            $table->enum('content_type', ['TEXT', 'IMAGE', 'VIDEO'])->default('IMAGE');
+            $table->string('content_type')->default('IMAGE');
             $table->boolean('is_nsfw')->default(false);
             $table->enum('license_type', ['FREE', 'COMMERCIAL', 'EXCLUSIVE'])->default('COMMERCIAL');
             $table->integer('royalty_percentage')->default(0);

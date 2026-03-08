@@ -23,9 +23,16 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Test User']
         );
 
+        Schema::disableForeignKeyConstraints();
+        \App\Models\Prompt::truncate();
+        \App\Models\AiModel::truncate();
+        \App\Models\Category::truncate();
+        Schema::enableForeignKeyConstraints();
+
         $this->call([
             CategorySeeder::class,
             AiModelSeeder::class,
+            PromptSeeder::class,
         ]);
     }
 }

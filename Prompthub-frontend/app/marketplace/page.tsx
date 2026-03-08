@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { AppShell } from "@/components/app-shell"
 import { PromptCard } from "@/components/prompt-card"
-import { prompts, categories, models, licenses } from "@/lib/mock-data"
-import { Search, SlidersHorizontal, ChevronDown } from "lucide-react"
+import { categories, models, licenses } from "@/lib/mock-data"
+import { Search, SlidersHorizontal, ChevronDown, Loader2 } from "lucide-react"
+import { getPrompts } from "@/lib/api"
 
 type SortOption = "newest" | "best-selling" | "price-low" | "price-high" | "rating"
 
@@ -49,8 +50,46 @@ export default function MarketplacePage() {
   const [page, setPage] = useState(1)
   const perPage = 6
 
+  const [apiPrompts, setApiPrompts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchAll() {
+      try {
+        setLoading(true)
+        // Fetch all prompts to utilize existing client-side filters
+        const res = await getPrompts({ per_page: '100' })
+
+        // Map backend snake_case to frontend camelCase
+        const mapped = res.data.map((p: any) => ({
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          price: parseFloat(p.price_stx),
+          image: p.preview_image_url || 'https://images.unsplash.com/photo-1614729939124-032f0b5609ce?w=800&q=80',
+          model: p.ai_model,
+          category: p.category,
+          tags: p.tags || [],
+          creatorName: "Artist", // Placeholder until users are linked
+          sales: p.total_sold,
+          rating: 4.5, // Mock rating
+          isCurated: p.is_curated,
+          isNsfw: p.is_nsfw,
+          license: p.license_type,
+          createdAt: p.created_at
+        }))
+        setApiPrompts(mapped)
+      } catch (err) {
+        console.error("Failed to load prompts", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAll()
+  }, [])
+
   const filtered = useMemo(() => {
-    let result = [...prompts]
+    let result = [...apiPrompts]
 
 
     if (search) {
@@ -58,7 +97,7 @@ export default function MarketplacePage() {
       result = result.filter(
         (p) =>
           p.title.toLowerCase().includes(q) ||
-          p.tags.some((t) => t.toLowerCase().includes(q)) ||
+          p.tags.some((t: string) => t.toLowerCase().includes(q)) ||
           p.creatorName.toLowerCase().includes(q)
       )
     }
@@ -89,7 +128,7 @@ export default function MarketplacePage() {
     }
 
     return result
-  }, [search, tab, category, model, license, sort, showNsfw])
+  }, [search, tab, category, model, license, sort, showNsfw, apiPrompts])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage))
   const paginated = filtered.slice((page - 1) * perPage, page * perPage)
@@ -106,7 +145,7 @@ export default function MarketplacePage() {
                 Explore <span className="gradient-text-holographic">Marketplace</span>
               </h1>
               <p className="mt-2 text-[#a78bfa]">
-                Discover {prompts.length.toLocaleString()} prompts from top creators
+                Discover {apiPrompts.length.toLocaleString()} prompts from top creators
               </p>
             </div>
 
@@ -114,8 +153,8 @@ export default function MarketplacePage() {
               <button
                 onClick={() => { setTab("curated"); setPage(1); }}
                 className={`px-6 py-2.5 text-sm font-extrabold uppercase transition-all ${tab === "curated"
-                    ? "bg-[#00ffff] text-black shadow-[2px_2px_0_0_#d1d5db]"
-                    : "text-[#a78bfa] hover:text-[#e0d4ff]"
+                  ? "bg-[#00ffff] text-black shadow-[2px_2px_0_0_#d1d5db]"
+                  : "text-[#a78bfa] hover:text-[#e0d4ff]"
                   }`}
               >
                 Curated
@@ -123,8 +162,8 @@ export default function MarketplacePage() {
               <button
                 onClick={() => { setTab("community"); setPage(1); }}
                 className={`px-6 py-2.5 text-sm font-extrabold uppercase transition-all ${tab === "community"
-                    ? "bg-[#b4ff39] text-black shadow-[2px_2px_0_0_#d1d5db]"
-                    : "text-[#a78bfa] hover:text-[#e0d4ff]"
+                  ? "bg-[#b4ff39] text-black shadow-[2px_2px_0_0_#d1d5db]"
+                  : "text-[#a78bfa] hover:text-[#e0d4ff]"
                   }`}
               >
                 Community
@@ -177,7 +216,12 @@ export default function MarketplacePage() {
         </div>
 
         {/* Results */}
-        {paginated.length > 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-32 space-y-4">
+            <Loader2 className="w-12 h-12 text-[#ff2d95] animate-spin" />
+            <h3 className="text-xl font-bold font-display tracking-widest text-[#e0d4ff] uppercase">Loading...</h3>
+          </div>
+        ) : paginated.length > 0 ? (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {paginated.map((prompt) => (
@@ -186,23 +230,46 @@ export default function MarketplacePage() {
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
-              <nav className="flex items-center justify-center gap-2 mt-12" aria-label="Pagination">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            {totalPages > 0 && (
+              <div className="flex flex-col items-center mt-16 pt-8 border-t border-[#2a2a30]">
+                <nav className="flex items-center gap-2" aria-label="Pagination">
                   <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`w-10 h-10 border-2 text-sm font-bold transition-all ${p === page
-                      ? "bg-[#ff2d95] border-[#ff2d95] text-white shadow-[4px_4px_0_0_#fff]"
-                      : "bg-[#160f24]/60 backdrop-blur-md border-[#2a2a30] text-[#a78bfa] hover:border-[#ff2d95] hover:text-[#e0d4ff] hover:shadow-[4px_4px_0_0_#ff2d95] hover:-translate-y-0.5 hover:-translate-x-0.5"
-                      }`}
-                    aria-label={`Page ${p}`}
-                    aria-current={p === page ? "page" : undefined}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="flex items-center justify-center h-10 px-3 border-2 border-[#2a2a30] bg-[#160f24]/60 text-[#a78bfa] font-bold text-sm transition-all hover:border-[#ff2d95] hover:text-[#e0d4ff] hover:shadow-[4px_4px_0_0_#ff2d95] hover:-translate-y-0.5 hover:-translate-x-0.5 disabled:opacity-50 disabled:pointer-events-none"
+                    aria-label="Previous page"
                   >
-                    {p}
+                    PREV
                   </button>
-                ))}
-              </nav>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      className={`w-10 h-10 border-2 text-sm font-bold transition-all ${p === page
+                          ? "bg-[#ff2d95] border-[#ff2d95] text-white shadow-[4px_4px_0_0_#fff]"
+                          : "bg-[#160f24]/60 backdrop-blur-md border-[#2a2a30] text-[#a78bfa] hover:border-[#ff2d95] hover:text-[#e0d4ff] hover:shadow-[4px_4px_0_0_#ff2d95] hover:-translate-y-0.5 hover:-translate-x-0.5"
+                        }`}
+                      aria-label={`Page ${p}`}
+                      aria-current={p === page ? "page" : undefined}
+                    >
+                      {p}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="flex items-center justify-center h-10 px-3 border-2 border-[#2a2a30] bg-[#160f24]/60 text-[#a78bfa] font-bold text-sm transition-all hover:border-[#ff2d95] hover:text-[#e0d4ff] hover:shadow-[4px_4px_0_0_#ff2d95] hover:-translate-y-0.5 hover:-translate-x-0.5 disabled:opacity-50 disabled:pointer-events-none"
+                    aria-label="Next page"
+                  >
+                    NEXT
+                  </button>
+                </nav>
+                <p className="text-[#a78bfa] text-sm mt-4 font-mono uppercase tracking-widest">
+                  Showing Page {page} of {totalPages}
+                </p>
+              </div>
             )}
           </>
         ) : (

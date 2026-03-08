@@ -1,13 +1,13 @@
 "use client"
 
-import { use, useState } from "react"
+import { use, useState, useEffect } from "react"
 import Link from "next/link"
 import { AppShell } from "@/components/app-shell"
 import { PromptCard } from "@/components/prompt-card"
 import { PurchaseModal } from "@/components/purchase-modal"
-import { prompts } from "@/lib/mock-data"
-import { ChevronRight, Check, Copy, Heart, MessageSquare, Share2, Star, ShieldCheck, Download, ExternalLink, Zap, Lock, BadgeCheck, Clock, Eye, Unlock } from "lucide-react"
-import { toggleBookmark, fetchPremiumContent } from "@/lib/api"
+import { prompts as mockPrompts } from "@/lib/mock-data"
+import { ChevronRight, Check, Copy, Heart, MessageSquare, Share2, Star, ShieldCheck, Download, ExternalLink, Zap, Lock, BadgeCheck, Clock, Eye, Unlock, Loader2 } from "lucide-react"
+import { toggleBookmark, fetchPremiumContent, getPrompt } from "@/lib/api"
 import { useWallet } from "@/lib/wallet-context"
 import { openSTXTransfer } from "@stacks/connect"
 import { cn } from "@/lib/utils"
@@ -27,7 +27,9 @@ const mockTxHistory = [
 
 export default function PromptDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const prompt = prompts.find((p) => p.id === Number(id))
+  const [prompt, setPrompt] = useState<any>(null)
+  const [pageLoading, setPageLoading] = useState(true)
+
   const { isConnected, address } = useWallet()
 
   const [purchaseOpen, setPurchaseOpen] = useState(false)
@@ -37,6 +39,40 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
 
   const [premiumContent, setPremiumContent] = useState<string | null>(null)
   const [unlockLoading, setUnlockLoading] = useState(false)
+
+  useEffect(() => {
+    async function fetchDetails() {
+      try {
+        setPageLoading(true)
+        const res = await getPrompt(id)
+        
+        // Map backend to frontend structure
+        setPrompt({
+          id: res.id,
+          title: res.title,
+          description: res.description,
+          price: parseFloat(res.price_stx),
+          model: res.ai_model,
+          category: res.category,
+          sales: res.total_sold,
+          reviews: 5,
+          rating: 4.5,
+          license: res.license_type,
+          royalty: res.royalty || 5, // Default royalty if null
+          tags: res.tags || [],
+          creatorName: "Artist", // Placeholder
+          creator: "0xUNKNOWN", // Placeholder
+          createdAt: new Date(res.created_at).toISOString().split('T')[0],
+          isCurated: res.is_curated,
+        })
+      } catch (err) {
+        console.error("Failed to fetch prompt", err)
+      } finally {
+        setPageLoading(false)
+      }
+    }
+    fetchDetails()
+  }, [id])
 
   const handleToggleBookmark = async () => {
     if (bookmarkLoading || !prompt) return
@@ -81,12 +117,24 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
     }
   }
 
+  if (pageLoading) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center py-40 space-y-4">
+          <Loader2 className="w-12 h-12 text-[#ff2d95] animate-spin" />
+          <h3 className="text-xl font-bold font-display tracking-widest text-[#e0d4ff] uppercase">Initializing Matrix...</h3>
+        </div>
+      </AppShell>
+    )
+  }
+
   if (!prompt) {
     return (
       <AppShell>
-        <div className="mx-auto max-w-7xl px-4 py-20 text-center">
-          <h1 className="text-2xl font-bold text-[#e0d4ff]">Prompt Not Found</h1>
-          <Link href="/marketplace" className="text-[#ff2d95] text-sm mt-4 inline-block font-bold">
+        <div className="mx-auto max-w-7xl px-4 py-40 text-center">
+          <h1 className="text-4xl font-extrabold text-[#e0d4ff] mb-4 uppercase tracking-widest font-display">Prompt Not Found</h1>
+          <p className="text-[#a78bfa] font-mono mb-8 max-w-md mx-auto">The requested prompt could not be located in the neural network or has been removed by the creator.</p>
+          <Link href="/marketplace" className="bg-[#ff2d95] text-white px-8 py-3 text-sm border-2 border-[#ff2d95] inline-block font-extrabold uppercase hover:bg-transparent hover:text-[#ff2d95] hover:shadow-[4px_4px_0_0_#ff2d95] hover:-translate-y-1 hover:-translate-x-1 transition-all">
             Back to Marketplace
           </Link>
         </div>
@@ -94,7 +142,7 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
     )
   }
 
-  const related = prompts.filter((p) => p.category === prompt.category && p.id !== prompt.id).slice(0, 3)
+  const related = mockPrompts.filter((p) => p.category === prompt.category && p.id !== prompt.id).slice(0, 3)
 
   return (
     <AppShell>
@@ -241,7 +289,7 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
                       ))}
                     </div>
                     <div className="flex flex-wrap gap-2 mt-6">
-                      {prompt.tags.map((tag) => (
+                      {prompt.tags.map((tag: string) => (
                         <span key={tag} className="px-3 py-1 bg-[#160f24]/60 backdrop-blur-md border border-[#00ffff]/40 text-xs text-[#00ffff] font-mono font-bold uppercase">
                           {tag}
                         </span>
