@@ -40,4 +40,9 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Prompt::class, 'bookmarks', 'user_id', 'prompt_id')->withTimestamps();
     }
+
+    public function reviewsReceived()
+    {
+        return $this->hasMany(ArtistReview::class, 'artist_id');
+    }
 }

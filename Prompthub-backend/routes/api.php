@@ -13,6 +13,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\AiModelController;
 
 use App\Http\Controllers\BookmarkController;
+use App\Http\Controllers\ArtistReviewController;
 
 Route::post('/auth/login', [AuthController::class, 'login']);
 
@@ -23,6 +24,7 @@ Route::get('/contests', [ContestController::class, 'index']);
 Route::get('/contests/{id}', [ContestController::class, 'show']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/ai-models', [AiModelController::class, 'index']);
+Route::get('/artists/{id}/reviews', [ArtistReviewController::class, 'index']);
 
 // Protected routes (requires Sanctum token)
 Route::middleware('auth:sanctum')->group(function () {
@@ -30,6 +32,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/me', [AuthController::class, 'me']);
     Route::put('/users/me', [AuthController::class, 'update']);
     Route::post('/users/upload', [\App\Http\Controllers\FileController::class, 'uploadToIpfs']);
+    
+    // Artist Reviews
+    Route::post('/artists/{id}/reviews', [ArtistReviewController::class, 'store']);
     
     // Taxonomy
     Route::post('/categories', [CategoryController::class, 'store']);
