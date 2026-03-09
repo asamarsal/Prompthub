@@ -102,7 +102,7 @@ export function Footer() {
               />
             </Link>
             <p className="mt-3 text-sm text-white/70 leading-relaxed max-w-xs">
-              The decentralized marketplace for AI prompts. Y2K edition. Powered by Bitcoin and the Stacks network.
+              The Bitcoin Marketplace Infrastructure for AI Creators to Monetize Every Prompt & Experiment. Powered by Bitcoin and the Stacks network.
             </p>
             {/* Pixel accent */}
             <div className="mt-4 h-1 w-24 y2k-pixel-border" aria-hidden="true" />
