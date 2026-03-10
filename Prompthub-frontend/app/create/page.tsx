@@ -4,6 +4,7 @@ import { useState } from "react"
 import { AppShell } from "@/components/app-shell"
 import { Upload, Check, ChevronRight, ChevronLeft, FileText, Lightbulb, X, Loader2 } from "lucide-react"
 import { categories as allCategories, models as allModels } from "@/lib/mock-data"
+import { createPrompt } from "@/lib/api"
 
 const steps = ["Basic Info", "Pricing & License", "Upload Content", "Preview & Confirm"]
 
@@ -44,6 +45,8 @@ interface FormData {
   license: "Free" | "Commercial" | "Exclusive"
   royalty: number
   file: string | null
+  previewImageUrl: string
+  contentType: "TEXT" | "IMAGE" | "VIDEO" | "AUDIO" | "CODE"
   isNsfw: boolean
 }
 
@@ -63,6 +66,8 @@ export default function CreatePage() {
     license: "Commercial",
     royalty: 5,
     file: null,
+    previewImageUrl: "",
+    contentType: "TEXT",
     isNsfw: false,
   })
 
@@ -80,17 +85,46 @@ export default function CreatePage() {
   const removeTag = (tag: string) => update("tags", form.tags.filter((t) => t !== tag))
 
   const handleDeploy = async () => {
-    setDeploying(true)
-    await new Promise((r) => setTimeout(r, 3000))
-    setDeploying(false)
-    setDeployed(true)
+    try {
+      setDeploying(true)
+
+      // Ensure URL has protocol for backend validation
+      let previewUrl = form.previewImageUrl.trim()
+      if (previewUrl && !previewUrl.startsWith('http')) {
+        previewUrl = `https://${previewUrl}`
+      }
+
+      // Map mapping for Backend API
+      const payload = {
+        title: form.title,
+        description: form.description,
+        price_stx: parseFloat(form.price),
+        preview_image_url: previewUrl,
+        cid_ipfs: `ipfs://${Math.random().toString(36).substring(2, 15)}`, // Mock IPFS CID
+        ai_model: form.model,
+        category: form.category,
+        tags: form.tags,
+        content_type: form.contentType,
+        is_nsfw: form.isNsfw,
+        license_type: form.license.toUpperCase(),
+        royalty_percentage: form.royalty,
+      }
+
+      await createPrompt(payload)
+      setDeployed(true)
+    } catch (error) {
+      console.error("Failed to deploy prompt:", error)
+      alert("Failed to deploy prompt. Please check your connection and try again.")
+    } finally {
+      setDeploying(false)
+    }
   }
 
   const feePercentage = isVerified ? 0.025 : 0.10
   const platformFee = Number(form.price) * feePercentage
 
   const canProceed = [
-    form.title.length > 0 && form.description.length > 0,
+    form.title.length > 0 && form.description.length > 0 && form.previewImageUrl.length > 0,
     Number(form.price) >= 0,
     form.file !== null,
     true,
@@ -147,7 +181,7 @@ export default function CreatePage() {
                         className="w-full bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] px-4 py-3 text-sm text-[#e0d4ff] placeholder-[#a78bfa]/30 focus:outline-none focus:border-[#00ffff] resize-none font-medium transition-colors"
                       />
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       <div>
                         <label htmlFor="category" className="block text-sm font-bold text-[#e0d4ff] mb-2">Category</label>
                         <select
@@ -174,6 +208,30 @@ export default function CreatePage() {
                           ))}
                         </select>
                       </div>
+                      <div className="sm:col-span-2 lg:col-span-1">
+                        <label htmlFor="contentType" className="block text-sm font-bold text-[#e0d4ff] mb-2">Content Type</label>
+                        <select
+                          id="contentType"
+                          value={form.contentType}
+                          onChange={(e) => update("contentType", e.target.value as any)}
+                          className="w-full bg-[#160f24] border-2 border-[#2a2a30] px-4 py-3 text-sm text-[#e0d4ff] focus:outline-none focus:border-[#00ffff] font-medium transition-colors appearance-none"
+                        >
+                          {["TEXT", "IMAGE", "VIDEO", "AUDIO", "CODE"].map((t) => (
+                            <option key={t} value={t} className="bg-[#0a001a]">{t}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="previewImageUrl" className="block text-sm font-bold text-[#e0d4ff] mb-2">Preview Image URL</label>
+                      <input
+                        id="previewImageUrl"
+                        type="url"
+                        value={form.previewImageUrl}
+                        onChange={(e) => update("previewImageUrl", e.target.value)}
+                        placeholder="https://example.com/image.png (Link mandatory)"
+                        className="w-full bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] px-4 py-3 text-sm text-[#e0d4ff] placeholder-[#a78bfa]/30 focus:outline-none focus:border-[#00ffff] font-medium transition-colors"
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-[#e0d4ff] mb-2">Tags (up to 5)</label>
@@ -351,13 +409,15 @@ export default function CreatePage() {
                           { label: "Title", value: form.title || "Untitled" },
                           { label: "Category", value: form.category },
                           { label: "AI Model", value: form.model },
+                          { label: "Content Type", value: form.contentType },
                           { label: "License", value: form.license },
                           { label: "Price", value: `${form.price} sBTC`, isPrice: true },
                           { label: "Royalty", value: `${form.royalty}%` },
+                          { label: "Preview", value: form.previewImageUrl, isUrl: true },
                         ].map((item) => (
-                          <div key={item.label}>
+                          <div key={item.label} className={item.isUrl ? "col-span-2" : ""}>
                             <p className="text-[#a78bfa]/50 font-mono uppercase text-xs">{item.label}</p>
-                            <p className={`font-bold ${item.isPrice ? 'text-[#00ffff]' : 'text-[#e0d4ff]'}`}>{item.value}</p>
+                            <p className={`font-bold truncate ${item.isPrice ? 'text-[#00ffff]' : 'text-[#e0d4ff]'}`}>{item.value}</p>
                           </div>
                         ))}
                       </div>

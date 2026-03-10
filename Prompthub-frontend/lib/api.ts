@@ -230,3 +230,14 @@ export async function getPrompts(params?: Record<string, string>): Promise<Pagin
 export async function getPrompt(id: string): Promise<any> {
     return request<any>(`/api/prompts/${id}`);
 }
+
+/**
+ * POST /api/prompts
+ * Creates a new prompt.
+ */
+export async function createPrompt(data: any): Promise<any> {
+    return request<any>("/api/prompts", {
+        method: "POST",
+        body: JSON.stringify(data),
+    });
+}

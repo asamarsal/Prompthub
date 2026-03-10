@@ -41,7 +41,7 @@ function FilterSelect({
 
 export default function MarketplacePage() {
   const [search, setSearch] = useState("")
-  const [tab, setTab] = useState<"curated" | "community">("curated")
+  const [tab, setTab] = useState<"curated" | "community">("community")
   const [category, setCategory] = useState("All Categories")
   const [model, setModel] = useState("All Models")
   const [license, setLicense] = useState("All Licenses")
@@ -58,7 +58,7 @@ export default function MarketplacePage() {
       try {
         setLoading(true)
         // Fetch all prompts to utilize existing client-side filters
-        const res = await getPrompts({ per_page: '100' })
+        const res = await getPrompts({ per_page: '100', nsfw: 'true' })
 
         // Map backend snake_case to frontend camelCase
         const mapped = res.data.map((p: any) => ({
@@ -70,7 +70,7 @@ export default function MarketplacePage() {
           model: p.ai_model,
           category: p.category,
           tags: p.tags || [],
-          creatorName: "Artist", // Placeholder until users are linked
+          creatorName: p.user?.name || (p.user?.stx_address ? `${p.user.stx_address.slice(0, 4)}...${p.user.stx_address.slice(-4)}` : "Artist"),
           sales: p.total_sold,
           rating: 4.5, // Mock rating
           isCurated: p.is_curated,
@@ -247,8 +247,8 @@ export default function MarketplacePage() {
                       key={p}
                       onClick={() => setPage(p)}
                       className={`w-10 h-10 border-2 text-sm font-bold transition-all ${p === page
-                          ? "bg-[#ff2d95] border-[#ff2d95] text-white shadow-[4px_4px_0_0_#fff]"
-                          : "bg-[#160f24]/60 backdrop-blur-md border-[#2a2a30] text-[#a78bfa] hover:border-[#ff2d95] hover:text-[#e0d4ff] hover:shadow-[4px_4px_0_0_#ff2d95] hover:-translate-y-0.5 hover:-translate-x-0.5"
+                        ? "bg-[#ff2d95] border-[#ff2d95] text-white shadow-[4px_4px_0_0_#fff]"
+                        : "bg-[#160f24]/60 backdrop-blur-md border-[#2a2a30] text-[#a78bfa] hover:border-[#ff2d95] hover:text-[#e0d4ff] hover:shadow-[4px_4px_0_0_#ff2d95] hover:-translate-y-0.5 hover:-translate-x-0.5"
                         }`}
                       aria-label={`Page ${p}`}
                       aria-current={p === page ? "page" : undefined}

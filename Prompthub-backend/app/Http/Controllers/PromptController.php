@@ -9,7 +9,7 @@ class PromptController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Prompt::where('is_published', true);
+        $query = Prompt::with('user')->where('is_published', true);
 
         // Filter by category
         if ($request->has('category')) {
@@ -26,12 +26,10 @@ class PromptController extends Controller
             $query->where('content_type', strtoupper($request->type));
         }
 
-        // Filter NSFW
-        if ($request->has('nsfw')) {
-            $isNsfw = filter_var($request->nsfw, FILTER_VALIDATE_BOOLEAN);
-            $query->where('is_nsfw', $isNsfw);
-        } else {
-            // Default hide NSFW if not explicitly requested
+        // Filter NSFW: If not explicitly requesting NSFW, only show non-NSFW content.
+        // If nsfw=true is passed, we show everything (NSFW and non-NSFW).
+        $isNsfwRequested = filter_var($request->query('nsfw', false), FILTER_VALIDATE_BOOLEAN);
+        if (!$isNsfwRequested) {
             $query->where('is_nsfw', false);
         }
 
@@ -81,7 +79,7 @@ class PromptController extends Controller
 
     public function show($id)
     {
-        return response()->json(Prompt::findOrFail($id));
+        return response()->json(Prompt::with('user')->findOrFail($id));
     }
 
     public function store(Request $request)
@@ -90,7 +88,7 @@ class PromptController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'price_stx' => 'required|numeric|min:0',
-            'preview_image_url' => 'nullable|string|url',
+            'preview_image_url' => 'nullable|string',
             'cid_ipfs' => 'required|string',
             'ai_model' => 'nullable|string',
             'category' => 'nullable|string',
@@ -102,7 +100,7 @@ class PromptController extends Controller
         ]);
         
         $validated['id'] = (string) \Illuminate\Support\Str::uuid();
-        $validated['user_id'] = $request->user()->id ?? 'MockUser'; // Mock for now until auth is fully implemented
+        $validated['user_id'] = $request->user()->id ?? '019cce30-9e2f-710b-ad84-ebbadb55ad2c'; // Use existing user ID for now
         $validated['is_published'] = true;
         
         $prompt = Prompt::create($validated);

@@ -7,6 +7,7 @@ import { useState } from "react"
 import { toggleBookmark } from "@/lib/api"
 import type { Prompt } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 const categoryIcons: Record<string, string> = {
   "Image Generation": "IMG",
@@ -39,8 +40,16 @@ export function PromptCard({ prompt }: { prompt: Prompt }) {
       setLoading(true)
       const res = await toggleBookmark(prompt.id)
       setIsBookmarked(res.is_bookmarked)
+
+      toast.success(res.is_bookmarked ? "Added to Collection" : "Removed from Collection", {
+        description: res.is_bookmarked
+          ? `${prompt.title} has been added to your saved prompts.`
+          : `${prompt.title} has been removed from your saved prompts.`,
+        duration: 2000,
+      })
     } catch (err) {
       console.error(err)
+      toast.error("Failed to update collection")
     } finally {
       setLoading(false)
     }

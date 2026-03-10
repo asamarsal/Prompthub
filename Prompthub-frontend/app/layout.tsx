@@ -49,7 +49,7 @@ export default function RootLayout({
         <WalletProvider>
           {children}
         </WalletProvider>
-        <Toaster theme="dark" />
+        <Toaster theme="dark" position="top-right" />
         <Analytics />
       </body>
     </html>

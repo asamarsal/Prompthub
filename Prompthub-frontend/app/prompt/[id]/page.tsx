@@ -11,6 +11,7 @@ import { toggleBookmark, fetchPremiumContent, getPrompt } from "@/lib/api"
 import { useWallet } from "@/lib/wallet-context"
 import { openSTXTransfer } from "@stacks/connect"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 const mockReviews = [
   { id: 1, user: "0xab12...cd34", userName: "CryptoCreator", rating: 5, comment: "Incredible results! The prompts generated stunning portraits every time.", date: "2026-02-25", verified: true },
@@ -60,8 +61,8 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
           license: res.license_type,
           royalty: res.royalty || 5, // Default royalty if null
           tags: res.tags || [],
-          creatorName: "Artist", // Placeholder
-          creator: "0xUNKNOWN", // Placeholder
+          creatorName: res.user?.name || "Artist",
+          creator: res.user?.stx_address || "0xUNKNOWN",
           createdAt: new Date(res.created_at).toISOString().split('T')[0],
           isCurated: res.is_curated,
         })
@@ -80,8 +81,18 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
       setBookmarkLoading(true)
       const res = await toggleBookmark(prompt.id)
       setIsBookmarked(res.is_bookmarked)
+
+      toast.success(res.is_bookmarked ? "Added to Collection" : "Removed from Collection", {
+        description: res.is_bookmarked
+          ? `${prompt.title} has been added to your saved prompts.`
+          : `${prompt.title} has been removed from your saved prompts.`,
+        duration: 3000,
+      })
     } catch (err) {
       console.error(err)
+      toast.error("Failed to update collection", {
+        description: "Please check your connection and try again.",
+      })
     } finally {
       setBookmarkLoading(false)
     }

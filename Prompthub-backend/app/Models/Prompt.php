@@ -40,6 +40,11 @@ class Prompt extends Model
         'total_sold' => 'integer'
     ];
 
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function bookmarkedBy()
     {
         return $this->belongsToMany(User::class, 'bookmarks', 'prompt_id', 'user_id')->withTimestamps();
