@@ -40,16 +40,21 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full mt-2 w-80 glass-strong rounded-xl overflow-hidden shadow-[0_8px_40px_rgba(255,45,149,0.15)] z-50"
+      className="absolute right-0 top-[calc(100%+12px)] w-80 bg-[#0f0f13] border-2 border-[#2a2a30] rounded-xl shadow-[6px_6px_0_0_#00ffff] z-50 flex flex-col"
       role="menu"
       aria-label="Notifications"
     >
-      <div className="p-3 border-b border-[rgba(180,120,255,0.12)]">
-        <h3 className="text-sm font-bold text-[#00ffff] uppercase tracking-wider">Notifications</h3>
+      <div className="px-4 py-3 border-b-2 border-[#2a2a30] bg-[#1a1a20]">
+        <h3 className="text-sm font-black text-[#00ffff] uppercase tracking-widest flex items-center gap-2">
+          <Bell className="w-4 h-4" strokeWidth={3} /> Notifications
+        </h3>
       </div>
       <div className="max-h-80 overflow-y-auto">
         {notifications.length === 0 ? (
-          <div className="p-4 text-center text-sm text-[#e0d4ff]/60">No new notifications</div>
+          <div className="p-6 text-center">
+            <Bell className="w-8 h-8 text-white/10 mx-auto mb-2" strokeWidth={1.5} />
+            <p className="text-sm font-bold text-white/40 uppercase tracking-wider">No new notifications</p>
+          </div>
         ) : (
           notifications.map((n) => {
             const Icon = iconMap[n.type] || Bell
@@ -63,19 +68,19 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
             return (
               <button
                 key={n.id}
-                className="w-full flex items-start gap-3 p-3 hover:bg-[rgba(255,45,149,0.06)] transition-colors text-left"
+                className="w-full flex items-start gap-4 p-4 hover:bg-[#1a1a20] transition-colors text-left border-b border-[#2a2a30]/50 last:border-0"
                 role="menuitem"
               >
-                <div className={`mt-0.5 ${color}`}>
-                  <Icon className="w-4 h-4" />
+                <div className={`mt-0.5 p-2 rounded-full bg-[#1a1a20] border border-[#2a2a30] ${color}`}>
+                  <Icon className="w-4 h-4" strokeWidth={2.5} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[#e0d4ff] flex items-center gap-2">
-                    {title}
-                    {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-[#ff2d95] animate-pulse" />}
+                  <p className="text-sm font-bold text-white flex items-center justify-between gap-2">
+                    <span className="truncate">{title}</span>
+                    {!n.is_read && <span className="w-2 h-2 rounded-full bg-[#ff2d95] shadow-[0_0_8px_#ff2d95] animate-pulse shrink-0" />}
                   </p>
-                  <p className="text-xs text-[#a78bfa] truncate">{message}</p>
-                  <p className="text-xs text-[#a78bfa]/40 mt-0.5 font-mono">{timestamp}</p>
+                  <p className="text-xs text-white/60 mt-1 line-clamp-2 leading-relaxed">{message}</p>
+                  <p className="text-[10px] text-white/30 mt-2 font-mono uppercase tracking-wider">{timestamp}</p>
                 </div>
               </button>
             )

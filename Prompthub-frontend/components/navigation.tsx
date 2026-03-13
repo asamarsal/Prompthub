@@ -89,12 +89,15 @@ export function Navigation() {
                 <div className="relative flex items-center">
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}
-                    className="p-2 bg-[#111] border border-[#2a2a30] hover:border-[#a855f7] rounded-full transition-all relative flex items-center justify-center group"
+                    className={cn(
+                      "p-2.5 border-2 rounded-xl transition-all relative flex items-center justify-center group shadow-md",
+                      showNotifications ? "bg-[#1a1a20] border-[#00ffff] text-[#00ffff]" : "bg-[#111] border-[#2a2a30] hover:border-[#00ffff] hover:bg-[#1a1a20] text-white/70 hover:text-[#00ffff]"
+                    )}
                     aria-label="Notifications"
                   >
-                    <Bell className="w-4 h-4 text-white/70 group-hover:text-white transition-colors" />
+                    <Bell className="w-5 h-5 transition-colors" strokeWidth={2.5} />
                     {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#ff2d95] shadow-[0_0_8px_#ff2d95] border border-[#0a0a0c] flex items-center justify-center text-[8px] font-bold text-white">
+                      <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[#ff2d95] shadow-[0_0_10px_#ff2d95] border-2 border-[#0a0a0c] flex items-center justify-center text-[10px] font-black text-white">
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
@@ -107,30 +110,33 @@ export function Navigation() {
                 {/* Profile button */}
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center gap-2.5 px-3 py-2 bg-[#111] border border-[#2a2a30] hover:border-[#a855f7] transition-all group"
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 bg-[#111] border-2 transition-all group rounded-xl shadow-md",
+                    showDropdown ? "border-[#a855f7]" : "border-[#2a2a30] hover:border-[#a855f7] hover:bg-[#1a1a20]"
+                  )}
                 >
                   {/* Avatar bubble */}
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#a855f7] to-[#00ffff] flex items-center justify-center text-xs font-extrabold text-white shrink-0">
-                    {profile.name ? profile.name[0].toUpperCase() : <User className="w-3.5 h-3.5" />}
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#a855f7] to-[#00ffff] flex items-center justify-center text-sm font-black text-white shrink-0 shadow-inner">
+                    {profile.name ? profile.name[0].toUpperCase() : <User className="w-4 h-4" strokeWidth={2.5} />}
                   </div>
-                  <div className="flex flex-col items-start">
-                    <span className="text-xs font-bold text-white leading-none">
+                  <div className="flex flex-col items-start pr-1">
+                    <span className="text-sm font-bold text-white leading-none">
                       {profile.name || truncateAddress(address!)}
                     </span>
-                    <span className="text-[10px] text-[#a855f7] leading-none mt-0.5">
+                    <span className="text-[10px] text-[#a855f7] font-bold leading-none mt-1 uppercase tracking-wider">
                       {profile.roles.length > 0 ? `${ROLE_ICONS[profile.activeRole]} ${ROLE_LABELS[profile.activeRole]}` : "Set up profile →"}
                     </span>
                   </div>
-                  <ChevronDown className={cn("w-3.5 h-3.5 text-white/40 transition-transform", showDropdown && "rotate-180")} />
+                  <ChevronDown className={cn("w-4 h-4 text-white/50 transition-transform", showDropdown && "rotate-180")} strokeWidth={2.5} />
                 </button>
 
                 {/* Profile Dropdown */}
                 {showDropdown && (
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-[#0a0a0c] border border-[#2a2a30] shadow-[5px_5px_0_0_#a855f7] z-50 flex flex-col" onClick={e => e.stopPropagation()}>
+                  <div className="absolute right-0 top-[calc(100%+12px)] w-64 bg-[#0f0f13] border-2 border-[#2a2a30] rounded-xl shadow-[6px_6px_0_0_#a855f7] z-50 flex flex-col" onClick={e => e.stopPropagation()}>
                     {/* Header */}
-                    <div className="px-4 py-3 border-b border-[#2a2a30]">
+                    <div className="px-4 py-3 border-b-2 border-[#2a2a30] bg-[#1a1a20] rounded-t-xl">
                       <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="text-xs text-white/40 font-mono">Connected as</span>
+                        <span className="text-[10px] text-white/50 font-mono uppercase tracking-widest font-bold">Connected as</span>
                         <button onClick={copyAddress} title="Copy address" className="p-0.5 text-white/30 hover:text-[#00ffff] transition-colors">
                           {copied ? <Check className="w-3.5 h-3.5 text-[#b4ff39]" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>

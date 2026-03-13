@@ -10,7 +10,7 @@ const oxanium = Oxanium({ subsets: ["latin"], variable: "--font-display" });
 import { WalletProvider } from '@/lib/wallet-context'
 
 export const metadata: Metadata = {
-  title: 'PrompHub // Dapps on Stacks',
+  title: 'PromptHub // Dapps on Stacks',
   description: 'Buy, sell, and trade AI prompts on Bitcoin. Marketplace powered by the Stacks network.',
   generator: 'v0.app',
   icons: {
