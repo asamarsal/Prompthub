@@ -3,27 +3,33 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Menu, X, Search, LayoutDashboard, Plus, Wallet, Copy, Check, Palette, Trophy, User, Settings, ChevronDown } from "lucide-react"
+import { Menu, X, Search, LayoutDashboard, Plus, Wallet, Copy, Check, Palette, Trophy, User, Settings, ChevronDown, Bell, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useWallet, truncateAddress, ROLE_LABELS, ROLE_ICONS, type UserRole } from "@/lib/wallet-context"
 import { RoleOnboardingModal } from "@/components/role-onboarding-modal"
+import { NotificationsDropdown } from "@/components/notifications-dropdown"
+import { useNotifications } from "@/hooks/use-notifications"
 
 const navLinks = [
   { href: "/marketplace", label: "MARKETPLACE", icon: Search },
   { href: "/hire", label: "HIRE", icon: Palette },
   { href: "/contests", label: "CONTESTS", icon: Trophy },
+  { href: "/messages", label: "MESSAGES", icon: MessageSquare },
   { href: "/dashboard", label: "DASHBOARD", icon: LayoutDashboard },
   { href: "/create", label: "CREATE", icon: Plus },
 ]
 
 export function Navigation() {
   const pathname = usePathname()
-  const { isConnected, address, balance, stxBalance, disconnect, connect, profile, needsOnboarding, switchRole, saveProfile } = useWallet()
+  const { isConnected, address, balance, stxBalance, disconnect, connect, profile, needsOnboarding, switchRole } = useWallet()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [mounted, setMounted] = useState(false)
+
+  const { unreadCount } = useNotifications()
 
   useEffect(() => setMounted(true), [])
 
@@ -78,7 +84,26 @@ export function Navigation() {
           {/* Desktop Right */}
           <div className="hidden md:flex items-center gap-3">
             {isConnected ? (
-              <div className="relative">
+              <div className="flex items-center gap-3">
+                {/* Notifications Button */}
+                <div className="relative flex items-center">
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="p-2 bg-[#111] border border-[#2a2a30] hover:border-[#a855f7] rounded-full transition-all relative flex items-center justify-center group"
+                    aria-label="Notifications"
+                  >
+                    <Bell className="w-4 h-4 text-white/70 group-hover:text-white transition-colors" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#ff2d95] shadow-[0_0_8px_#ff2d95] border border-[#0a0a0c] flex items-center justify-center text-[8px] font-bold text-white">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+                  {showNotifications && (
+                    <NotificationsDropdown onClose={() => setShowNotifications(false)} />
+                  )}
+                </div>
+
                 {/* Profile button */}
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}

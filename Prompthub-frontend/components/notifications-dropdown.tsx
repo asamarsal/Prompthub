@@ -1,17 +1,17 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { notifications } from "@/lib/mock-data"
+import { useNotifications } from "@/hooks/use-notifications"
 import { ShoppingCart, Star, Bell, TrendingDown } from "lucide-react"
 
-const iconMap = {
+const iconMap: Record<string, any> = {
   purchase: ShoppingCart,
   review: Star,
   system: Bell,
   "price-drop": TrendingDown,
 }
 
-const colorMap = {
+const colorMap: Record<string, string> = {
   purchase: "text-[#00ffff]",
   review: "text-[#ff6b2b]",
   system: "text-[#a855f7]",
@@ -20,6 +20,7 @@ const colorMap = {
 
 export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
+  const { notifications, markAsRead } = useNotifications()
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -30,6 +31,11 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
     document.addEventListener("mousedown", handleClick)
     return () => document.removeEventListener("mousedown", handleClick)
   }, [onClose])
+
+  useEffect(() => {
+    // Mark as read when opened
+    markAsRead();
+  }, [])
 
   return (
     <div
@@ -42,28 +48,39 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
         <h3 className="text-sm font-bold text-[#00ffff] uppercase tracking-wider">Notifications</h3>
       </div>
       <div className="max-h-80 overflow-y-auto">
-        {notifications.map((n) => {
-          const Icon = iconMap[n.type]
-          return (
-            <button
-              key={n.id}
-              className="w-full flex items-start gap-3 p-3 hover:bg-[rgba(255,45,149,0.06)] transition-colors text-left"
-              role="menuitem"
-            >
-              <div className={`mt-0.5 ${colorMap[n.type]}`}>
-                <Icon className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[#e0d4ff] flex items-center gap-2">
-                  {n.title}
-                  {!n.read && <span className="w-1.5 h-1.5 rounded-full bg-[#ff2d95] animate-pulse" />}
-                </p>
-                <p className="text-xs text-[#a78bfa] truncate">{n.message}</p>
-                <p className="text-xs text-[#a78bfa]/40 mt-0.5 font-mono">{n.timestamp}</p>
-              </div>
-            </button>
-          )
-        })}
+        {notifications.length === 0 ? (
+          <div className="p-4 text-center text-sm text-[#e0d4ff]/60">No new notifications</div>
+        ) : (
+          notifications.map((n) => {
+            const Icon = iconMap[n.type] || Bell
+            const color = colorMap[n.type] || "text-[#a855f7]"
+
+            // Extract title and message from data obj if exist
+            const title = n.data?.title || 'Notification'
+            const message = n.data?.message || ''
+            const timestamp = new Date(n.created_at).toLocaleString()
+
+            return (
+              <button
+                key={n.id}
+                className="w-full flex items-start gap-3 p-3 hover:bg-[rgba(255,45,149,0.06)] transition-colors text-left"
+                role="menuitem"
+              >
+                <div className={`mt-0.5 ${color}`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-[#e0d4ff] flex items-center gap-2">
+                    {title}
+                    {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-[#ff2d95] animate-pulse" />}
+                  </p>
+                  <p className="text-xs text-[#a78bfa] truncate">{message}</p>
+                  <p className="text-xs text-[#a78bfa]/40 mt-0.5 font-mono">{timestamp}</p>
+                </div>
+              </button>
+            )
+          })
+        )}
       </div>
     </div>
   )

@@ -241,3 +241,53 @@ export async function createPrompt(data: any): Promise<any> {
         body: JSON.stringify(data),
     });
 }
+
+// ─── Messages & Notifications ─────────────────────────────────────────────
+
+export async function searchUsers(query: string): Promise<ApiUser[]> {
+    return request<ApiUser[]>(`/api/users/search?q=${encodeURIComponent(query)}`);
+}
+
+export async function fetchConversations(): Promise<any[]> {
+    return request<any[]>("/api/messages");
+}
+
+export async function fetchMessages(address: string): Promise<any[]> {
+    return request<any[]>(`/api/messages/${address}`);
+}
+
+export async function sendMessage(data: { receiver_address: string, content: string }): Promise<any> {
+    return request<any>("/api/messages", {
+        method: "POST",
+        body: JSON.stringify(data),
+    });
+}
+
+export async function fetchNotifications(): Promise<any[]> {
+    return request<any[]>("/api/notifications");
+}
+
+export async function markNotificationsRead(): Promise<any> {
+    return request<any>("/api/notifications/read", { method: "PUT" });
+}
+
+// ─── Connections (Friends) ────────────────────────────────────────────────
+
+export async function fetchConnections(): Promise<any[]> {
+    return request<any[]>("/api/connections");
+}
+
+export async function sendFriendRequest(recipientAddress: string): Promise<any> {
+    return request<any>("/api/connections", {
+        method: "POST",
+        body: JSON.stringify({ recipient_address: recipientAddress }),
+    });
+}
+
+export async function acceptFriendRequest(connectionId: number): Promise<any> {
+    return request<any>(`/api/connections/${connectionId}/accept`, { method: "PUT" });
+}
+
+export async function removeFriendConnection(connectionId: number): Promise<any> {
+    return request<any>(`/api/connections/${connectionId}`, { method: "DELETE" });
+}

@@ -11,6 +11,7 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\AiModelController;
+use App\Http\Controllers\UserController;
 
 use App\Http\Controllers\BookmarkController;
 use App\Http\Controllers\ArtistReviewController;
@@ -29,6 +30,7 @@ Route::get('/artists/{id}/reviews', [ArtistReviewController::class, 'index']);
 // Protected routes (requires Sanctum token)
 Route::middleware('auth:sanctum')->group(function () {
     // Users
+    Route::get('/users/search', [UserController::class, 'search']);
     Route::get('/users/me', [AuthController::class, 'me']);
     Route::put('/users/me', [AuthController::class, 'update']);
     Route::post('/users/upload', [\App\Http\Controllers\FileController::class, 'uploadToIpfs']);
@@ -61,7 +63,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/hire/{id}/status', [HireRequestController::class, 'updateStatus']);
 
     // Messages
+    Route::get('/connections', [\App\Http\Controllers\ConnectionController::class, 'index']);
+    Route::post('/connections', [\App\Http\Controllers\ConnectionController::class, 'store']);
+    Route::put('/connections/{id}/accept', [\App\Http\Controllers\ConnectionController::class, 'accept']);
+    Route::delete('/connections/{id}', [\App\Http\Controllers\ConnectionController::class, 'destroy']);
+
+    // Messages
     Route::get('/messages', [MessageController::class, 'index']);
+    Route::get('/messages/{address}', [MessageController::class, 'history']);
     Route::post('/messages', [MessageController::class, 'store']);
 
     // Notifications
