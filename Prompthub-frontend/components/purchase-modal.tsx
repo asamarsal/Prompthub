@@ -5,6 +5,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Check, Loader2, ExternalLink, Download, LayoutDashboard, Share2 } from "lucide-react"
 import type { Prompt } from "@/lib/mock-data"
 import { useWallet } from "@/lib/wallet-context"
+import { openContractCall } from "@stacks/connect"
+import { uintCV } from "@stacks/transactions"
+import { STACKS_TESTNET, STACKS_MOCKNET } from "@stacks/network"
 
 type PurchaseState = "confirm" | "processing" | "success"
 type Currency = "STX" | "sBTC"
@@ -18,10 +21,18 @@ export function PurchaseModal({
   onClose: () => void
   prompt: Prompt
 }) {
-  const { isConnected } = useWallet()
+  const { isConnected, address } = useWallet()
   const [state, setState] = useState<PurchaseState>("confirm")
   const [txId, setTxId] = useState<string | null>(null)
   const [currency, setCurrency] = useState<Currency>("STX")
+
+  // Use testnet by default, switch to mocknet if needed
+  const network = process.env.NEXT_PUBLIC_STACKS_NETWORK === 'mocknet'
+    ? STACKS_MOCKNET
+    : STACKS_TESTNET
+
+  const contractAddress = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM'
+  const contractName = 'prompthub-marketplace'
 
   const platformFee = prompt.price * 0.025
   const royaltyFee = prompt.price * (prompt.royalty / 100)
@@ -31,65 +42,40 @@ export function PurchaseModal({
   const amountToMicroStx = Math.floor(total * 1000000)
 
   const handleConfirm = async () => {
+    if (!isConnected || !address) {
+      alert("Please connect your wallet first.")
+      return
+    }
+
+    if (prompt.contract_id === undefined || prompt.contract_id === null) {
+      alert("This prompt is not listed on-chain yet.")
+      return
+    }
+
     setState("processing")
 
     try {
-      if (!isConnected) {
-        // Fallback for demo if wallet isn't connected
-        await new Promise((r) => setTimeout(r, 2000))
-        setTxId("0x8f3a9b...b2c1demo")
-        setState("success")
-        return
-      }
-
-      // 1. Message Signing for Authentication
-      const challenge = `Authorize purchase of "${prompt.title}" for ${total.toFixed(6)} STX\nNonce: ${Math.random().toString(36).substring(7)}\nTime: ${Date.now()}`
-
-      // Get the wallet provider injected by Leather/Xverse extension
-      const provider = window.LeatherProvider
-        ?? window.StacksProvider
-        ?? (window as any).XverseProviders?.StacksProvider
-      if (!provider) throw new Error("No Stacks wallet extension found")
-
-      // 1. Sign a challenge message for authentication
-      const signRaw = await provider.request('stx_signMessage', { message: challenge })
-      // Leather wraps responses in .result; handle both formats
-      const signResult = signRaw?.result ?? signRaw
-      if (!signResult?.signature && !signResult) {
-        setState("confirm")
-        return
-      }
-
-      // 2. STX Transfer (raw provider API — Leather, Xverse compatible)
-      const transferRaw = await provider.request('stx_transferStx', {
-        amount: amountToMicroStx.toString(),
-        recipient: 'ST9HWDEXT80QXEAYFZ57VK39ZNWP6213TFES5KCE',
-        memo: `Buy Prompt ${prompt.id} via ${currency}`,
+      // Contract Call to prompthub-marketplace
+      await openContractCall({
+        network,
+        contractAddress,
+        contractName,
+        functionName: 'buy-prompt',
+        functionArgs: [
+          uintCV(prompt.contract_id)
+        ],
+        onFinish: (data) => {
+          setTxId(data.txId)
+          setState("success")
+        },
+        onCancel: () => {
+          setState("confirm")
+        },
       })
-
-      // Leather returns { result: { txid: '...' } }, Xverse may return { txid: '...' } directly
-      const txid = transferRaw?.result?.txid
-        ?? transferRaw?.result?.txId
-        ?? transferRaw?.txid
-        ?? transferRaw?.txId
-        ?? null
-
-      if (txid) {
-        setTxId(txid)
-        setState("success")
-      } else {
-        // Transaction was broadcast but no txid — still treat as success
-        setTxId(null)
-        setState("success")
-      }
     } catch (e) {
       console.error(e)
-      if ((e as Error).message?.includes('rejected')) {
-        // User rejected the signing or transfer request
-        setState("confirm")
-      } else {
-        setState("confirm")
-      }
+      alert("An error occurred while processing the transaction.")
+      setState("confirm")
     }
   }
 

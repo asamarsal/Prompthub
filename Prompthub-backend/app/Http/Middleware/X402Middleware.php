@@ -23,7 +23,7 @@ class X402Middleware
         $user     = Auth::user();
 
         // The STX address of the prompt owner (payTo)
-        $ownerAddress = $prompt->user?->stx_address ?? config('app.platform_treasury_address', 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM');
+        $ownerAddress = $prompt->user?->stx_address ?? config('stacks.marketplace_contract_address', 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM');
 
         // Required amount: prompt price in microSTX (1 STX = 1,000,000 µSTX)
         $requiredMicroStx = (int) ($prompt->price_stx * 1_000_000);
@@ -65,12 +65,53 @@ class X402Middleware
                     $tx = $txRes->json();
 
                     $isConfirmed  = ($tx['tx_status'] ?? '') === 'success';
-                    $isStxTransfer = ($tx['tx_type'] ?? '') === 'token_transfer';
-                    $recipient    = $tx['token_transfer']['recipient_address'] ?? '';
-                    $amount       = (int) ($tx['token_transfer']['amount'] ?? 0);
-                    $senderMatch  = true; // optional extra check: ($tx['sender_address'] ?? '') === $user?->stx_address
+                    $txType       = $tx['tx_type'] ?? '';
+                    $isValidPayment = false;
+                    $amount = 0;
 
-                    if ($isConfirmed && $isStxTransfer && $recipient === $ownerAddress && $amount >= $requiredMicroStx) {
+                    if ($isConfirmed) {
+                        // Case 1: Direct STX Transfer
+                        if ($txType === 'token_transfer') {
+                            $recipient = $tx['token_transfer']['recipient_address'] ?? '';
+                            $amount = (int) ($tx['token_transfer']['amount'] ?? 0);
+                            if ($recipient === $ownerAddress && $amount >= $requiredMicroStx) {
+                                $isValidPayment = true;
+                            }
+                        }
+                        // Case 2: Smart Contract Call (buy-prompt)
+                        elseif ($txType === 'contract_call') {
+                            $contractId = $tx['contract_call']['contract_id'] ?? '';
+                            $functionName = $tx['contract_call']['function_name'] ?? '';
+                            
+                            // Check if it's the marketplace contract and buy-prompt function
+                            // Note: contract address might vary based on deployer, 
+                            // but usually it's the platform treasury address.
+                            if ($functionName === 'buy-prompt') {
+                                // Extract the prompt ID argument from the contract call
+                                // Logic: buy-prompt(uint) -> args[0]
+                                foreach ($tx['contract_call']['function_args'] ?? [] as $arg) {
+                                    if ($arg['name'] === 'prompt-id' && (int)($arg['repr'] ?? 0) === $prompt->contract_id) {
+                                        // Verify that STX was actually transferred as part of the internal events
+                                        foreach ($tx['events'] ?? [] as $event) {
+                                            if (($event['event_type'] ?? '') === 'stx_asset') {
+                                                $assetEvent = $event['asset_event'];
+                                                if ($assetEvent['asset_event_type'] === 'transfer' && 
+                                                    $assetEvent['recipient'] === $ownerAddress) {
+                                                    $amount = (int) ($assetEvent['amount'] ?? 0);
+                                                    if ($amount >= ($requiredMicroStx * 0.95)) { // Allow 5% margin for fees
+                                                        $isValidPayment = true;
+                                                        break 2;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if ($isValidPayment) {
                         // Mark this tx as used (cache for 30 days)
                         Cache::put($cacheKey, true, now()->addDays(30));
 

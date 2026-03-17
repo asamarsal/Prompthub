@@ -65,6 +65,7 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
           creator: res.user?.stx_address || "0xUNKNOWN",
           createdAt: new Date(res.created_at).toISOString().split('T')[0],
           isCurated: res.is_curated,
+          contract_id: res.contract_id,
         })
       } catch (err) {
         console.error("Failed to fetch prompt", err)

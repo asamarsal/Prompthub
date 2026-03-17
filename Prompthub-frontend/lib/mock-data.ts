@@ -1,5 +1,6 @@
 export interface Prompt {
-  id: number
+  id: string | number
+  contract_id?: number
   title: string
   creator: string
   creatorName: string
@@ -23,6 +24,7 @@ export interface Prompt {
 export const prompts: Prompt[] = [
   {
     id: 1,
+    contract_id: 1,
     title: "Photorealistic Portrait Generator",
     creator: "0x1a2b...3c4d",
     creatorName: "AIArtist_Pro",
