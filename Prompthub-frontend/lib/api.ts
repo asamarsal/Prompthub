@@ -88,6 +88,7 @@ export interface UploadResponse {
     cid: string
     url: string
     path: string
+    ipfs_uri: string
     user?: any // The updated user model from backend
 }
 
@@ -95,7 +96,7 @@ export interface UploadResponse {
  * POST /api/users/upload
  * Uploads a file to IPFS via the backend Pinata bridge.
  */
-export async function uploadFile(file: File, type: "avatar" | "cover"): Promise<UploadResponse> {
+export async function uploadFile(file: File, type: "avatar" | "cover" | "prompt"): Promise<UploadResponse> {
     const formData = new FormData()
     formData.append("file", file)
     formData.append("type", type)
@@ -104,6 +105,36 @@ export async function uploadFile(file: File, type: "avatar" | "cover"): Promise<
         method: "POST",
         body: formData,
     }, true)
+}
+
+/**
+ * POST /api/prompts/upload-assets
+ * Uploads a file to local backend storage.
+ */
+export async function uploadPromptAsset(file: File): Promise<UploadResponse> {
+    const formData = new FormData()
+    formData.append("file", file)
+
+    return request<UploadResponse>("/api/prompts/upload-assets", {
+        method: "POST",
+        body: formData,
+    }, true)
+}
+
+/**
+ * POST /api/ipfs/metadata
+ * Uploads JSON metadata to IPFS via the backend.
+ */
+export async function uploadMetadata(data: {
+    name: string
+    description: string
+    image: string
+    properties?: any
+}): Promise<UploadResponse> {
+    return request<UploadResponse>("/api/ipfs/metadata", {
+        method: "POST",
+        body: JSON.stringify(data),
+    })
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────

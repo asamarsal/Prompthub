@@ -31,7 +31,7 @@
   }
 )
 
-;; Prize tiers — keyed by contest-id + place (u1 = 1st, u2 = 2nd, etc.)
+;; Prize tiers  keyed by contest-id + place (u1 = 1st, u2 = 2nd, etc.)
 (define-map prize-tiers
   { contest-id: uint, place: uint }
   {
@@ -160,13 +160,13 @@
     ;; Transfer this tier's prize immediately to the winner
     (try! (as-contract (stx-transfer? (get amount tier) tx-sender winner)))
 
-    ;; Check if ALL tiers have been filled → auto-complete the contest
+    ;; Check if ALL tiers have been filled  auto-complete the contest
     (if (>= new-winners-count (get num-tiers contest))
-      ;; All winners declared — mark contest COMPLETED
+      ;; All winners declared  mark contest COMPLETED
       (map-set contests contest-id
         (merge contest { winners-declared: new-winners-count, status: "COMPLETED" })
       )
-      ;; Not done yet — just update the count
+      ;; Not done yet  just update the count
       (map-set contests contest-id
         (merge contest { winners-declared: new-winners-count })
       )
@@ -197,7 +197,7 @@
 )
 
 ;; =====================
-;; Declare Winner — External / Manual Override
+;; Declare Winner  External / Manual Override
 ;; Same as declare-winner, but NO on-chain submission required.
 ;; Use when the winner was chosen via off-chain submission (e.g., platform only upload).
 ;; Brand manually inputs ANY Stacks Principal address as the winner.
@@ -217,7 +217,7 @@
     ;; Tier must not already have a winner
     (asserts! (is-none (get winner tier)) err-already-has-winner)
 
-    ;; ⚠ Note: No submission check — any STX address accepted manually
+    ;;  Note: No submission check  any STX address accepted manually
 
     ;; Record winner in the tier
     (map-set prize-tiers

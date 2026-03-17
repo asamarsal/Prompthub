@@ -1,10 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { AppShell } from "@/components/app-shell"
 import { Upload, Check, ChevronRight, ChevronLeft, FileText, Lightbulb, X, Loader2 } from "lucide-react"
 import { categories as allCategories, models as allModels } from "@/lib/mock-data"
-import { createPrompt } from "@/lib/api"
+import { createPrompt, uploadFile, uploadMetadata, uploadPromptAsset } from "@/lib/api"
+import { useWallet } from "@/lib/wallet-context"
+import { openContractCall } from "@stacks/connect"
+import {
+  uintCV,
+  stringAsciiCV,
+  PostConditionMode
+} from "@stacks/transactions"
+import { STACKS_TESTNET } from "@stacks/network"
 
 const steps = ["Basic Info", "Pricing & License", "Upload Content", "Preview & Confirm"]
 
@@ -44,13 +52,17 @@ interface FormData {
   price: string
   license: "Free" | "Commercial" | "Exclusive"
   royalty: number
-  file: string | null
+  file: File | null
   previewImageUrl: string
+  previewImageFile: File | null
+  previewMode: "url" | "upload"
   contentType: "TEXT" | "IMAGE" | "VIDEO" | "AUDIO" | "CODE"
   isNsfw: boolean
+  currency: "STX" | "sBTC"
 }
 
 export default function CreatePage() {
+  const { isConnected, address, profile } = useWallet()
   const [step, setStep] = useState(0)
   const [tagInput, setTagInput] = useState("")
   const [deploying, setDeploying] = useState(false)
@@ -67,9 +79,24 @@ export default function CreatePage() {
     royalty: 5,
     file: null,
     previewImageUrl: "",
+    previewImageFile: null,
+    previewMode: "upload",
     contentType: "TEXT",
     isNsfw: false,
+    currency: "STX",
   })
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (form.previewImageFile) {
+      const url = URL.createObjectURL(form.previewImageFile)
+      setPreviewUrl(url)
+      return () => URL.revokeObjectURL(url)
+    } else {
+      setPreviewUrl(null)
+    }
+  }, [form.previewImageFile])
 
   const update = <K extends keyof FormData>(key: K, val: FormData[K]) =>
     setForm((prev) => ({ ...prev, [key]: val }))
@@ -85,37 +112,96 @@ export default function CreatePage() {
   const removeTag = (tag: string) => update("tags", form.tags.filter((t) => t !== tag))
 
   const handleDeploy = async () => {
+    if (!form.file) {
+      alert("Please upload a prompt file first.")
+      return
+    }
+
     try {
       setDeploying(true)
 
-      // Ensure URL has protocol for backend validation
-      let previewUrl = form.previewImageUrl.trim()
-      if (previewUrl && !previewUrl.startsWith('http')) {
-        previewUrl = `https://${previewUrl}`
+      // 0. Upload Preview Image if in upload mode
+      let finalPreviewUrl = form.previewImageUrl
+      if (form.previewMode === "upload" && form.previewImageFile) {
+        console.log("Uploading preview image to local storage...")
+        const previewRes = await uploadPromptAsset(form.previewImageFile)
+        finalPreviewUrl = previewRes.url
+        console.log("Preview image uploaded to local, URL:", finalPreviewUrl)
       }
 
-      // Map mapping for Backend API
-      const payload = {
-        title: form.title,
+      // 1. Upload the real Prompt Content to local storage
+      console.log("Uploading prompt file to local storage...", form.file.name)
+      const uploadRes = await uploadPromptAsset(form.file)
+      const promptUrl = uploadRes.url
+      console.log("File uploaded to local, URL:", promptUrl)
+
+      // 2. Upload NFT Metadata to IPFS
+      const metadataRes = await uploadMetadata({
+        name: form.title,
         description: form.description,
-        price_stx: parseFloat(form.price),
-        preview_image_url: previewUrl,
-        cid_ipfs: `ipfs://${Math.random().toString(36).substring(2, 15)}`, // Mock IPFS CID
-        ai_model: form.model,
-        category: form.category,
-        tags: form.tags,
-        content_type: form.contentType,
-        is_nsfw: form.isNsfw,
-        license_type: form.license.toUpperCase(),
-        royalty_percentage: form.royalty,
-      }
+        image: finalPreviewUrl,
+        properties: {
+          category: form.category,
+          model: form.model,
+          content_type: form.contentType,
+          prompt_url: promptUrl, // Link to local backend storage
+          license: form.license,
+          royalty: form.royalty,
+          creator_name: profile.name || profile.username || "Anonymous",
+          creator_address: address || ""
+        }
+      })
+      const metadataCID = metadataRes.ipfs_uri
+      console.log("Metadata uploaded, CID:", metadataCID)
 
-      await createPrompt(payload)
-      setDeployed(true)
+      // 3. Call Smart Contract (list-prompt)
+      const contractAddressStr = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || ""
+      const [contractOwner, contractFileName] = contractAddressStr.split('.')
+
+      const priceMicroStx = Math.round(parseFloat(form.price) * 1000000)
+      console.log("Calling contract...", { contractOwner, contractFileName, priceMicroStx })
+
+      await openContractCall({
+        network: STACKS_TESTNET,
+        contractAddress: contractOwner,
+        contractName: contractFileName,
+        functionName: "list-prompt",
+        functionArgs: [
+          stringAsciiCV(metadataCID), // ipfs-uri
+          uintCV(priceMicroStx)       // price
+        ],
+        postConditionMode: PostConditionMode.Allow, // Simple for now
+        onFinish: async (data) => {
+          console.log("Transaction broadcasted:", data.txId)
+
+          // 4. Save to Backend
+          await createPrompt({
+            title: form.title,
+            description: form.description,
+            price_stx: parseFloat(form.price),
+            preview_image_url: finalPreviewUrl,
+            cid_ipfs: metadataCID,
+            ai_model: form.model,
+            category: form.category,
+            tags: form.tags,
+            content_type: form.contentType,
+            is_nsfw: form.isNsfw,
+            license_type: form.license.toUpperCase(),
+            royalty_percentage: form.royalty,
+            stacks_tx_id: data.txId, // Store the TX ID for verification
+            currency: form.currency
+          })
+          setDeployed(true)
+        },
+        onCancel: () => {
+          setDeploying(false)
+          console.log("Deployment cancelled by user")
+        }
+      })
+
     } catch (error) {
       console.error("Failed to deploy prompt:", error)
       alert("Failed to deploy prompt. Please check your connection and try again.")
-    } finally {
       setDeploying(false)
     }
   }
@@ -124,7 +210,9 @@ export default function CreatePage() {
   const platformFee = Number(form.price) * feePercentage
 
   const canProceed = [
-    form.title.length > 0 && form.description.length > 0 && form.previewImageUrl.length > 0,
+    form.title.length > 0 &&
+    form.description.length > 0 &&
+    (form.previewMode === "url" ? form.previewImageUrl.length > 0 : form.previewImageFile !== null),
     Number(form.price) >= 0,
     form.file !== null,
     true,
@@ -223,15 +311,85 @@ export default function CreatePage() {
                       </div>
                     </div>
                     <div>
-                      <label htmlFor="previewImageUrl" className="block text-sm font-bold text-[#e0d4ff] mb-2">Preview Image URL</label>
-                      <input
-                        id="previewImageUrl"
-                        type="url"
-                        value={form.previewImageUrl}
-                        onChange={(e) => update("previewImageUrl", e.target.value)}
-                        placeholder="https://example.com/image.png (Link mandatory)"
-                        className="w-full bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] px-4 py-3 text-sm text-[#e0d4ff] placeholder-[#a78bfa]/30 focus:outline-none focus:border-[#00ffff] font-medium transition-colors"
-                      />
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-bold text-[#e0d4ff]">Preview Image</label>
+                        <div className="flex bg-[#160f24] border border-[#2a2a30] p-0.5 rounded-lg">
+                          <button
+                            type="button"
+                            onClick={() => update("previewMode", "upload")}
+                            className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${form.previewMode === "upload" ? "bg-[#b4ff39] text-black shadow-sm" : "text-[#a78bfa] hover:text-[#e0d4ff]"}`}
+                          >
+                            Upload
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => update("previewMode", "url")}
+                            className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${form.previewMode === "url" ? "bg-[#00ffff] text-black shadow-sm" : "text-[#a78bfa] hover:text-[#e0d4ff]"}`}
+                          >
+                            Link
+                          </button>
+                        </div>
+                      </div>
+
+                      {form.previewMode === "url" ? (
+                        <input
+                          id="previewImageUrl"
+                          type="url"
+                          value={form.previewImageUrl}
+                          onChange={(e) => update("previewImageUrl", e.target.value)}
+                          placeholder="https://example.com/image.png"
+                          className="w-full bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] px-4 py-3 text-sm text-[#e0d4ff] placeholder-[#a78bfa]/30 focus:outline-none focus:border-[#00ffff] font-medium transition-colors"
+                        />
+                      ) : (
+                        <div
+                          className={`relative backdrop-blur-md bg-[#160f24]/60 border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${form.previewImageFile ? "border-[#b4ff39] bg-[#b4ff39]/5" : "border-[#2a2a30] hover:border-[#00ffff]"}`}
+                          onClick={() => document.getElementById("preview-upload")?.click()}
+                        >
+                          <input
+                            id="preview-upload"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0]
+                              if (f) update("previewImageFile", f)
+                            }}
+                          />
+                          {form.previewImageFile ? (
+                            <div className="flex items-center gap-4 text-left">
+                              <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-[#b4ff39]/30 shrink-0 bg-[#0a001a]">
+                                {previewUrl ? (
+                                  <img
+                                    src={previewUrl}
+                                    alt="Preview"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Upload className="w-5 h-5 text-[#b4ff39]" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-bold text-[#e0d4ff] truncate">{form.previewImageFile.name}</p>
+                                <p className="text-[10px] text-[#b4ff39] uppercase font-bold tracking-wider">Ready to upload</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); update("previewImageFile", null); }}
+                                className="p-2 hover:bg-[#ff2d95]/10 rounded-full transition-colors"
+                              >
+                                <X className="w-4 h-4 text-[#ff2d95]" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="py-2">
+                              <p className="text-xs text-[#a78bfa] font-bold uppercase tracking-wider">Click to upload preview image</p>
+                              <p className="text-[10px] text-[#a78bfa]/40 mt-1 italic">JPG, PNG, WEBP (Max 5MB)</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-[#e0d4ff] mb-2">Tags (up to 5)</label>
@@ -287,19 +445,35 @@ export default function CreatePage() {
                 {step === 1 && (
                   <div className="flex flex-col gap-6">
                     <div>
-                      <label htmlFor="price" className="block text-sm font-bold text-[#e0d4ff] mb-2">Price (sBTC)</label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label htmlFor="price" className="block text-sm font-bold text-[#e0d4ff]">Price</label>
+                        <div className="flex gap-2">
+                          {(["STX", "sBTC"] as const).map((curr) => (
+                            <button
+                              key={curr}
+                              onClick={() => update("currency", curr)}
+                              className={`px-3 py-1 text-[10px] font-extrabold border-2 transition-all ${form.currency === curr
+                                ? "bg-[#00ffff] border-[#00ffff] text-black shadow-[2px_2px_0_0_#fff]"
+                                : "bg-[#160f24]/60 border-[#2a2a30] text-[#a78bfa] hover:border-[#00ffff]/50"
+                                }`}
+                            >
+                              {curr}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <div className="relative">
                         <input
                           id="price"
                           type="number"
-                          step="0.001"
+                          step={form.currency === "sBTC" ? "0.0001" : "0.5"}
                           min="0"
                           value={form.price}
                           onChange={(e) => update("price", e.target.value)}
                           className="w-full bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] px-4 py-3 text-sm text-[#e0d4ff] focus:outline-none focus:border-[#00ffff] font-medium transition-colors"
                         />
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[#a78bfa]/50 font-mono">
-                          ~${(Number(form.price) * 65000).toFixed(2)} USD
+                          ~${(Number(form.price) * (form.currency === "sBTC" ? 65000 : 2.5)).toFixed(2)} USD
                         </span>
                       </div>
                     </div>
@@ -353,19 +527,42 @@ export default function CreatePage() {
                     <div
                       className={`backdrop-blur-md bg-[#160f24]/60 border-2 border-dashed p-12 text-center cursor-pointer transition-all ${form.file ? "border-[#b4ff39] bg-[#b4ff39]/10 shadow-[8px_8px_0_0_#b4ff39]" : "border-[#2a2a30] hover:border-[#00ffff] hover:shadow-[4px_4px_0_0_#00ffff]"
                         }`}
-                      onClick={() => update("file", form.file ? null : "prompt-v1.txt")}
+                      onClick={() => document.getElementById("prompt-upload")?.click()}
                       role="button"
                       tabIndex={0}
                       aria-label="Upload file area"
-                      onKeyDown={(e) => e.key === "Enter" && update("file", form.file ? null : "prompt-v1.txt")}
+                      onKeyDown={(e) => e.key === "Enter" && document.getElementById("prompt-upload")?.click()}
                     >
+                      <input
+                        id="prompt-upload"
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) update("file", file)
+                        }}
+                      />
                       {form.file ? (
                         <div>
                           <div className="w-14 h-14 mx-auto mb-3 rounded-xl bg-[#b4ff39]/15 flex items-center justify-center glow-green">
                             <FileText className="w-7 h-7 text-[#b4ff39]" />
                           </div>
-                          <p className="text-sm font-bold text-[#e0d4ff]">{form.file}</p>
-                          <p className="text-xs text-[#a78bfa]/50 mt-1">Click to remove</p>
+                          <p className="text-sm font-bold text-[#e0d4ff]">{form.file.name}</p>
+                          <div className="flex items-center justify-center gap-2 mt-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); update("file", null); }}
+                              className="text-xs text-[#ff2d95] hover:underline font-bold"
+                            >
+                              Remove
+                            </button>
+                            <span className="text-[#a78bfa]/30">|</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); document.getElementById("prompt-upload")?.click(); }}
+                              className="text-xs text-[#00ffff] hover:underline font-bold"
+                            >
+                              Change
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div>
@@ -411,7 +608,7 @@ export default function CreatePage() {
                           { label: "AI Model", value: form.model },
                           { label: "Content Type", value: form.contentType },
                           { label: "License", value: form.license },
-                          { label: "Price", value: `${form.price} sBTC`, isPrice: true },
+                          { label: "Price", value: `${form.price} ${form.currency}`, isPrice: true },
                           { label: "Royalty", value: `${form.royalty}%` },
                           { label: "Preview", value: form.previewImageUrl, isUrl: true },
                         ].map((item) => (
@@ -428,7 +625,7 @@ export default function CreatePage() {
                       <div className="flex flex-col gap-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-[#a78bfa]">Listing Price</span>
-                          <span className="text-[#e0d4ff] font-mono">{form.price} sBTC</span>
+                          <span className="text-[#e0d4ff] font-mono">{form.price} {form.currency}</span>
                         </div>
                         <div className="flex justify-between items-center mt-1">
                           <span className="text-[#a78bfa] flex items-center gap-2">
@@ -436,7 +633,7 @@ export default function CreatePage() {
                             {isVerified && <span className="bg-[#b4ff39]/20 text-[#b4ff39] px-2 py-0.5 text-[10px] font-bold uppercase border border-[#b4ff39]/50">Verified Rate</span>}
                             {!isVerified && <span className="bg-[#a78bfa]/20 text-[#a78bfa] px-2 py-0.5 text-[10px] font-bold uppercase border border-[#a78bfa]/50">Standard Rate</span>}
                           </span>
-                          <span className="text-[#e0d4ff] font-mono">-{platformFee.toFixed(6)} sBTC</span>
+                          <span className="text-[#e0d4ff] font-mono">-{platformFee.toFixed(6)} {form.currency}</span>
                         </div>
                         <div className="border-t border-[rgba(180,120,255,0.1)] pt-3 mt-1 flex justify-between items-end">
                           <div className="flex flex-col">
@@ -447,7 +644,7 @@ export default function CreatePage() {
                               Toggle Role (Dev)
                             </button>
                           </div>
-                          <span className="font-extrabold text-[#b4ff39] text-lg">{(Number(form.price) - platformFee).toFixed(6)} sBTC</span>
+                          <span className="font-extrabold text-[#b4ff39] text-lg">{(Number(form.price) - platformFee).toFixed(6)} {form.currency}</span>
                         </div>
                       </div>
                     </div>

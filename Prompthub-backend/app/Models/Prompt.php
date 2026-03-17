@@ -28,7 +28,9 @@ class Prompt extends Model
         'is_curated',
         'total_sold',
         'original_content',
-        'contract_id'
+        'contract_id',
+        'stacks_tx_id',
+        'currency'
     ];
 
     protected $casts = [

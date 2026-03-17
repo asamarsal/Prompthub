@@ -97,10 +97,12 @@ class PromptController extends Controller
             'is_nsfw' => 'boolean',
             'license_type' => 'required|string|in:FREE,COMMERCIAL,EXCLUSIVE',
             'royalty_percentage' => 'nullable|integer|min:0|max:100',
+            'stacks_tx_id' => 'nullable|string',
+            'currency' => 'nullable|string|in:STX,sBTC',
         ]);
         
         $validated['id'] = (string) \Illuminate\Support\Str::uuid();
-        $validated['user_id'] = $request->user()->id ?? '019cce30-9e2f-710b-ad84-ebbadb55ad2c'; // Use existing user ID for now
+        $validated['user_id'] = $request->user()->id ?? \App\Models\User::first()?->id;
         $validated['is_published'] = true;
         
         $prompt = Prompt::create($validated);

@@ -9,8 +9,101 @@ class FileController extends Controller
 {
     public function uploadToIpfs(Request $request) 
     {
-        // renaming since we are pivotting to local storage but keeping route
-        return $this->uploadLocal($request);
+        $request->validate([
+            'file' => 'required|file|max:10240',
+        ]);
+
+        $file = $request->file('file');
+        $jwt = env('PINATA_JWT');
+        $jwt = config('services.pinata.jwt');
+
+        if (!$jwt) {
+            return response()->json(['error' => 'Pinata JWT not configured'], 500);
+        }
+
+        try {
+            $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . config('services.pinata.jwt'),
+        ])->attach('file', file_get_contents($file->getRealPath()), $file->getClientOriginalName())
+          ->post('https://api.pinata.cloud/pinning/pinFileToIPFS', [
+              'pinataMetadata' => json_encode(['name' => $file->getClientOriginalName()]),
+              'pinataOptions' => json_encode([
+                  'groupId' => config('services.pinata.group_id'),
+              ])
+          ]);
+
+            if (!$response->successful()) {
+                throw new \Exception('Pinata upload failed: ' . $response->body());
+            }
+
+            $data = $response->json();
+            $cid = $data['IpfsHash'];
+            $gateway = config('services.pinata.gateway', 'https://gateway.pinata.cloud/ipfs/');
+            
+            return response()->json([
+                'cid' => $cid,
+                'url' => $gateway . $cid,
+                'ipfs_uri' => 'ipfs://' . $cid
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'IPFS upload error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function uploadMetadata(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string',
+            'description' => 'required|string',
+            'image' => 'required|string', // URL of the preview image
+            'properties' => 'nullable|array',
+        ]);
+
+        $jwt = env('PINATA_JWT');
+        if (!$jwt) {
+            return response()->json(['error' => 'Pinata JWT not configured'], 500);
+        }
+
+        $metadata = [
+            'pinataContent' => [
+                'name' => $request->name,
+                'description' => $request->description,
+                'image' => $request->image,
+                'properties' => $request->properties ?? [],
+            ],
+            'pinataMetadata' => [
+                'name' => 'PromptHub NFT Metadata: ' . $request->name
+            ]
+        ];
+
+        try {
+            $response = Http::withToken($jwt)
+                ->post('https://api.pinata.cloud/pinning/pinJSONToIPFS', $metadata);
+
+            if (!$response->successful()) {
+                throw new \Exception('Pinata JSON upload failed: ' . $response->body());
+            }
+
+            $data = $response->json();
+            $cid = $data['IpfsHash'];
+            $gateway = env('PINATA_GATEWAY', 'https://gateway.pinata.cloud/ipfs/');
+
+            return response()->json([
+                'cid' => $cid,
+                'url' => $gateway . $cid,
+                'ipfs_uri' => 'ipfs://' . $cid
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Metadata upload error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function uploadLocal(Request $request)
@@ -58,6 +151,37 @@ class FileController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Local upload error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function uploadPromptAsset(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|max:10240',
+        ]);
+
+        $file = $request->file('file');
+        
+        try {
+            // Store in storage/app/public/prompt
+            $path = "prompt";
+            $extension = $file->getClientOriginalExtension();
+            $fileName = time() . '_' . uniqid() . '.' . $extension;
+            
+            $storedPath = $file->storeAs($path, $fileName, 'public');
+            $url = asset('storage/' . $storedPath);
+
+            return response()->json([
+                'url' => $url,
+                'path' => $storedPath,
+                'name' => $file->getClientOriginalName()
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Prompt asset upload error',
                 'error' => $e->getMessage()
             ], 500);
         }

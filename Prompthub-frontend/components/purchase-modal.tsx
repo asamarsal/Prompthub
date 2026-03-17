@@ -24,7 +24,7 @@ export function PurchaseModal({
   const { isConnected, address } = useWallet()
   const [state, setState] = useState<PurchaseState>("confirm")
   const [txId, setTxId] = useState<string | null>(null)
-  const [currency, setCurrency] = useState<Currency>("STX")
+  const [currency, setCurrency] = useState<Currency>((prompt.currency as Currency) || "STX")
 
   // Use testnet by default, switch to mocknet if needed
   const network = process.env.NEXT_PUBLIC_STACKS_NETWORK === 'mocknet'

@@ -21,9 +21,22 @@ cache_dir = "./.cache"
 passes = ["check_checker"]
 check_checker = { trusted_sender = false, trusted_caller = false, callee_filter = false }
 
-[contracts]
+[contracts.nft-trait]
+path = "contracts/nft-trait.clar"
+clarity_version = 2
+epoch = "2.5"
 
-[contracts.counter]
-path = "contracts/counter.clar"
-clarity_version = 4
-epoch = "latest"
+[contracts.prompthub-marketplace]
+path = "contracts/prompthub-marketplace.clar"
+clarity_version = 2
+epoch = "2.5"
+
+[contracts.prompthub-contests]
+path = "contracts/prompthub-contests.clar"
+clarity_version = 2
+epoch = "2.5"
+
+[contracts.prompthub-escrow-hire]
+path = "contracts/prompthub-escrow-hire.clar"
+clarity_version = 2
+epoch = "2.5"

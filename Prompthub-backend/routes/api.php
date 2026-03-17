@@ -34,6 +34,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/me', [AuthController::class, 'me']);
     Route::put('/users/me', [AuthController::class, 'update']);
     Route::post('/users/upload', [\App\Http\Controllers\FileController::class, 'uploadToIpfs']);
+    Route::post('/ipfs/metadata', [\App\Http\Controllers\FileController::class, 'uploadMetadata']);
+    Route::post('/prompts/upload-assets', [\App\Http\Controllers\FileController::class, 'uploadPromptAsset']);
     
     // Artist Reviews
     Route::post('/artists/{id}/reviews', [ArtistReviewController::class, 'store']);
