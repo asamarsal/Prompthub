@@ -283,7 +283,7 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(premiumContent);
-                                // Optional: add toast
+                                toast.success("Copied!", { description: "Prompt content copied to clipboard.", duration: 2000 });
                               }}
                               className="text-[10px] text-[#a78bfa] hover:text-[#b4ff39] transition-colors flex items-center gap-1 font-bold uppercase"
                             >
