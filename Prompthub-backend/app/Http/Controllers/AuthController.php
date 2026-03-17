@@ -37,7 +37,12 @@ class AuthController extends Controller
     public function update(Request $request)
     {
         $user = $request->user();
-        $user->update($request->only(['name', 'bio', 'avatar_url', 'cover_url', 'roles']));
+        
+        $request->validate([
+            'username' => 'nullable|string|min:3|max:30|unique:users,username,' . $user->id,
+        ]);
+        
+        $user->update($request->only(['username', 'name', 'bio', 'avatar_url', 'cover_url', 'roles']));
         return response()->json($user);
     }
 }

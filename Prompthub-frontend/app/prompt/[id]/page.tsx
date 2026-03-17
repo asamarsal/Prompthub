@@ -111,9 +111,20 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
             openSTXTransfer({
               recipient: tx.recipient,
               amount: tx.amount,
-              memo: tx.memo,
-              onFinish: (data) => resolve(data.txId),
-              onCancel: () => reject(new Error("Payment canceled")),
+              memo: `x402:${prompt.id}`,
+              onFinish: (data) => {
+                toast.success("Payment Sent!", {
+                  description: `TX ID: ${data.txId?.slice(0, 16)}...`,
+                  duration: 5000,
+                })
+                resolve(data.txId)
+              },
+              onCancel: () => {
+                toast.info("Payment cancelled", {
+                  description: "No STX was sent.",
+                })
+                reject(new Error("Payment canceled"))
+              },
             })
           })
         }
@@ -121,8 +132,22 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
 
       const res = await fetchPremiumContent(prompt.id, account)
       setPremiumContent(res.original_content)
+      toast.success("Content Unlocked!", {
+        description: "Your premium prompt content has been decrypted.",
+        duration: 4000,
+      })
     } catch (err: any) {
       console.error("Unlock failed:", err)
+      if (!err.message?.includes('Payment canceled')) {
+        toast.error("Unlock Failed", {
+          description: err.message?.includes('already used')
+            ? "This transaction has already been used to unlock content."
+            : err.message?.includes('402')
+              ? "Payment verification failed. Please ensure your STX transaction is confirmed."
+              : "An unexpected error occurred. Please try again.",
+          duration: 6000,
+        })
+      }
     } finally {
       setUnlockLoading(false)
     }
@@ -241,7 +266,7 @@ export default function PromptDetailPage({ params }: { params: Promise<{ id: str
                                 <Zap className="w-4 h-4 animate-spin" /> Verifying Payment...
                               </span>
                             ) : isConnected ? (
-                              "Unlock for 5 STX (x402)"
+                              `Unlock for ${prompt.price} STX (x402)`
                             ) : (
                               "Connect Wallet to Access"
                             )}

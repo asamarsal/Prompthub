@@ -110,6 +110,7 @@ export async function uploadFile(file: File, type: "avatar" | "cover"): Promise<
 
 export interface ApiUser {
     stx_address: string
+    username: string | null
     name: string | null
     bio: string | null
     avatar_url: string | null
@@ -156,6 +157,7 @@ export async function fetchUserByAddress(address: string): Promise<ApiUser> {
  * Updates the user's profile (name, bio, avatar_url, roles).
  */
 export async function updateProfile(data: {
+    username?: string
     name?: string
     bio?: string
     avatar_url?: string
@@ -252,14 +254,35 @@ export async function fetchConversations(): Promise<any[]> {
     return request<any[]>("/api/messages");
 }
 
-export async function fetchMessages(address: string): Promise<any[]> {
-    return request<any[]>(`/api/messages/${address}`);
+export async function fetchMessages(address: string, cursor?: string): Promise<any> {
+    const url = cursor ? `/api/messages/${address}?cursor=${cursor}` : `/api/messages/${address}`;
+    return request<any>(url);
 }
 
-export async function sendMessage(data: { receiver_address: string, content: string }): Promise<any> {
+export async function sendMessage(data: { receiver_address: string, content: string, attachment_url?: string }): Promise<any> {
     return request<any>("/api/messages", {
         method: "POST",
         body: JSON.stringify(data),
+    });
+}
+
+export async function sendTypingIndicator(receiverAddress: string): Promise<any> {
+    return request<any>("/api/messages/typing", {
+        method: "POST",
+        body: JSON.stringify({ receiver_address: receiverAddress }),
+    });
+}
+
+export async function markAllMessagesRead(senderAddress: string): Promise<any> {
+    return request<any>("/api/messages/read-all", {
+        method: "PUT",
+        body: JSON.stringify({ sender_address: senderAddress }),
+    });
+}
+
+export async function markMessageRead(messageId: number): Promise<any> {
+    return request<any>(`/api/messages/${messageId}/read`, {
+        method: "PUT",
     });
 }
 

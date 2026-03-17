@@ -16,8 +16,9 @@ class UserController extends Controller
         }
 
         $users = User::where('name', 'like', "%{$query}%")
+                     ->orWhere('username', 'like', "%{$query}%")
                      ->orWhere('stx_address', $query)
-                     ->select('id', 'name', 'stx_address', 'avatar_url')
+                     ->select('id', 'name', 'username', 'stx_address', 'avatar_url')
                      ->limit(10)
                      ->get();
 

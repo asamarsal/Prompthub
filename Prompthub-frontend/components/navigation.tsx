@@ -57,9 +57,8 @@ export function Navigation() {
             <img src="/icon/prompthub-logo.png" alt="PromptHub Logo" className="h-8 max-w-[200px] w-auto object-contain" />
           </Link>
 
-          {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8 h-full">
-            {navLinks.filter(l => isConnected || l.href !== "/dashboard").map((link) => {
+            {navLinks.filter(l => isConnected || (l.href !== "/dashboard" && l.href !== "/messages")).map((link) => {
               const Icon = link.icon
               const isActive = pathname === link.href
               return (
@@ -243,7 +242,7 @@ export function Navigation() {
         {mobileOpen && (
           <div className="md:hidden glass-panel border-t border-white/5 bg-[#0a0a0c]/95">
             <div className="flex flex-col p-4 gap-2">
-              {navLinks.filter(l => isConnected || l.href !== "/dashboard").map((link) => {
+              {navLinks.filter(l => isConnected || (l.href !== "/dashboard" && l.href !== "/messages")).map((link) => {
                 const Icon = link.icon
                 const isActive = pathname === link.href
                 return (

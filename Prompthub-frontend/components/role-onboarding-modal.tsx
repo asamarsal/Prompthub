@@ -34,6 +34,7 @@ export function RoleOnboardingModal({ open, onClose }: Props) {
     const { saveProfile, profile } = useWallet()
     const [selectedRoles, setSelectedRoles] = useState<UserRole[]>(profile.roles.length > 0 ? profile.roles : [])
     const [name, setName] = useState(profile.name || "")
+    const [username, setUsername] = useState(profile.username || "")
     const [bio, setBio] = useState(profile.bio || "")
     const [step, setStep] = useState<"role" | "info">("role")
 
@@ -49,6 +50,7 @@ export function RoleOnboardingModal({ open, onClose }: Props) {
         if (selectedRoles.length === 0) return
         const updated: UserProfile = {
             ...profile,
+            username: username.trim().toLowerCase(),
             name: name.trim(),
             bio: bio.trim(),
             roles: selectedRoles,
@@ -121,6 +123,16 @@ export function RoleOnboardingModal({ open, onClose }: Props) {
                             <p className="text-sm text-white/50 mb-5">This info appears on your public profile.</p>
                             <div className="flex flex-col gap-4 mb-6">
                                 <div>
+                                    <label className="text-xs text-white/40 uppercase tracking-wider block mb-1.5">Username *</label>
+                                    <input
+                                        value={username}
+                                        onChange={e => setUsername(e.target.value)}
+                                        placeholder="e.g. yuki_dsgn"
+                                        className="w-full px-3 py-2.5 bg-[#111] border border-[#2a2a30] text-white text-sm focus:outline-none focus:border-[#a855f7] transition-colors"
+                                    />
+                                    <p className="text-[10px] text-white/30 mt-1">Unique handle for tagging and profile links.</p>
+                                </div>
+                                <div>
                                     <label className="text-xs text-white/40 uppercase tracking-wider block mb-1.5">Display Name *</label>
                                     <input
                                         value={name}
@@ -155,7 +167,7 @@ export function RoleOnboardingModal({ open, onClose }: Props) {
                                     ← Back
                                 </button>
                                 <button
-                                    disabled={!name.trim()}
+                                    disabled={!name.trim() || !username.trim() || username.trim().length < 3}
                                     onClick={handleSave}
                                     className="flex-1 py-3 font-extrabold uppercase tracking-wider text-sm border-2 border-[#a855f7] bg-[#a855f7]/20 text-white shadow-[4px_4px_0_0_#a855f7] transition-all hover:-translate-y-0.5 disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
                                 >

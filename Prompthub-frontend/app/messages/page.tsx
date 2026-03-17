@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { fetchConversations, fetchMessages, searchUsers, sendMessage, fetchConnections, sendFriendRequest, acceptFriendRequest, removeFriendConnection } from "@/lib/api";
 import { getEcho } from "@/lib/echo";
 import { useWallet } from "@/lib/wallet-context";
-import { Search, Send, User, Check, Clock, UserPlus, MessageSquare } from "lucide-react";
+import { Search, Send, User, Check, Clock, UserPlus, MessageSquare, Image as ImageIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Navigation } from "@/components/navigation";
 
@@ -15,7 +15,14 @@ export default function MessagesPage() {
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState("");
+    const [otherIsTyping, setOtherIsTyping] = useState(false);
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const myTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [viewMode, setViewMode] = useState<"chats" | "requests">("chats");
+    const [attachment, setAttachment] = useState<{ file: File | null; url: string | null; isUploading: boolean }>({ file: null, url: null, isUploading: false });
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -34,6 +41,10 @@ export default function MessagesPage() {
         if (!selectedUser || !address) return;
 
         // Fetch History
+        import('@/lib/api').then(({ markAllMessagesRead }) => {
+            markAllMessagesRead(selectedUser.stx_address).catch(() => { });
+        });
+
         fetchMessages(selectedUser.stx_address).then(setMessages);
 
         // Echo webSockets
@@ -45,20 +56,43 @@ export default function MessagesPage() {
             // Append if it's from the selected user
             if (e.message.sender_address === selectedUser.stx_address) {
                 setMessages(prev => [...prev, e.message]);
+                setOtherIsTyping(false); // Clear typing indicator
             }
 
             // Update conversations list summary
             setConversations(prev => {
                 const existing = prev.find(c => c.sender_address === e.message.sender_address || c.receiver_address === e.message.sender_address);
                 if (existing) {
-                    return prev.map(c => c.id === existing.id ? e.message : c);
+                    return prev.map(c => c.id === existing.id ? { ...e.message, unread_count: (existing.unread_count || 0) + 1 } : c);
                 }
-                return [e.message, ...prev];
+                return [{ ...e.message, unread_count: 1 }, ...prev];
             });
+            import('@/lib/api').then(({ markAllMessagesRead }) => {
+                markAllMessagesRead(selectedUser.stx_address).catch(() => { });
+            });
+        });
+
+        channel.listen('Typing', (e: any) => {
+            if (e.sender_address === selectedUser.stx_address) {
+                setOtherIsTyping(true);
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = setTimeout(() => setOtherIsTyping(false), 3000);
+            }
+        });
+
+        channel.listen('MessageRead', (e: any) => {
+            if (e.message_id === 'all' && e.sender_address === address && e.receiver_address === selectedUser.stx_address) {
+                setMessages(prev => prev.map(m => ({ ...m, is_read: true })));
+            } else if (e.sender_address === address && e.receiver_address === selectedUser.stx_address) {
+                setMessages(prev => prev.map(m => m.id === e.message_id ? { ...m, is_read: true } : m));
+            }
         });
 
         return () => {
             channel.stopListening('MessageSent');
+            channel.stopListening('Typing');
+            channel.stopListening('MessageRead');
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         };
     }, [selectedUser, address]);
 
@@ -83,18 +117,22 @@ export default function MessagesPage() {
 
         const payload = {
             receiver_address: selectedUser.stx_address,
-            content: newMessage,
+            content: newMessage || (attachment.url ? "Sent an attachment" : ""),
+            attachment_url: attachment.url || undefined,
         };
 
         const tempMsg = {
             id: Date.now(),
             sender_address: address,
             receiver_address: selectedUser.stx_address,
-            content: newMessage,
+            content: payload.content,
+            attachment_url: payload.attachment_url,
             created_at: new Date().toISOString(),
+            is_read: false
         };
         setMessages(prev => [...prev, tempMsg]);
         setNewMessage("");
+        setAttachment({ file: null, url: null, isUploading: false });
 
         try {
             const savedMsg = await sendMessage(payload);
@@ -110,6 +148,50 @@ export default function MessagesPage() {
             if (err.message && err.message.includes("403")) {
                 alert("You are not friends with this user.");
             }
+        }
+    };
+
+    const handleNewMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setNewMessage(e.target.value);
+        if (selectedUser) {
+            if (myTypingTimeoutRef.current) clearTimeout(myTypingTimeoutRef.current);
+            myTypingTimeoutRef.current = setTimeout(() => {
+                import('@/lib/api').then(({ sendTypingIndicator }) => {
+                    sendTypingIndicator(selectedUser.stx_address).catch(() => { });
+                });
+            }, 500);
+        }
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setAttachment({ file, url: null, isUploading: true });
+            const { uploadFile } = await import('@/lib/api');
+            // Reusing the upload route that sends to IPFS
+            const res = await uploadFile(file, "avatar");
+            setAttachment({ file, url: res.url, isUploading: false });
+        } catch (err: any) {
+            console.error("Upload failed", err);
+            setAttachment({ file: null, url: null, isUploading: false });
+            alert("Failed to upload file");
+        }
+    };
+
+    const handleLoadMore = async () => {
+        if (!selectedUser || !nextCursor || isLoadingMore) return;
+        setIsLoadingMore(true);
+        try {
+            const { fetchMessages } = await import('@/lib/api');
+            const res = await fetchMessages(selectedUser.stx_address, nextCursor);
+            setMessages(prev => [...[...res.data].reverse(), ...prev]);
+            setNextCursor(res.next_cursor);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsLoadingMore(false);
         }
     };
 
@@ -248,8 +330,11 @@ export default function MessagesPage() {
                                             {user.name ? user.name[0].toUpperCase() : <User className="w-4 h-4" />}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold text-[#e0d4ff] truncate">{user.name || 'Unknown'}</p>
-                                            <p className="text-xs text-[#a855f7] font-mono truncate">{user.stx_address}</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-sm font-bold text-[#e0d4ff] truncate">{user.name || 'Unknown'}</p>
+                                                {user.username && <p className="text-xs text-[#00ffff] font-mono truncate">@{user.username}</p>}
+                                            </div>
+                                            <p className="text-[10px] text-[#a855f7] font-mono truncate mt-0.5">{user.stx_address}</p>
                                         </div>
                                         {/* Quick status badge if known */}
                                         {conn?.status === "accepted" && <Check className="w-3.5 h-3.5 text-[#00ffff]" />}
@@ -270,20 +355,33 @@ export default function MessagesPage() {
                             {conversations.map(conv => {
                                 const otherAddress = conv.sender_address === address ? conv.receiver_address : conv.sender_address;
                                 const isSelected = activeChatAddress === otherAddress;
+                                const unreadCount = isSelected ? 0 : (conv.unread_count || 0);
                                 return (
                                     <button
                                         key={conv.id}
-                                        onClick={() => setSelectedUser({ stx_address: otherAddress, name: otherAddress.slice(0, 8) + '...' })}
+                                        onClick={() => {
+                                            setSelectedUser({ stx_address: otherAddress, name: otherAddress.slice(0, 8) + '...' });
+                                            // Clear unread badge visually on click
+                                            setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c));
+                                        }}
                                         className={cn(
                                             "w-full flex items-start flex-col gap-1 p-3 rounded-lg transition-colors text-left mb-1 border border-transparent",
-                                            isSelected ? "bg-[#1a1a20] border-[#a855f7]/30" : "hover:bg-[#1a1a20]/60"
+                                            isSelected ? "bg-[#1a1a20] border-[#a855f7]/30" : "hover:bg-[#1a1a20]/60",
+                                            unreadCount > 0 && !isSelected ? "border-l-2 border-l-[#ff2d95]" : ""
                                         )}
                                     >
                                         <div className="w-full flex justify-between items-center">
                                             <p className="text-sm font-bold text-[#e0d4ff] font-mono truncate">{otherAddress.slice(0, 10)}...</p>
-                                            <span className="text-[10px] text-white/40 font-mono">
-                                                {new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                {unreadCount > 0 && (
+                                                    <span className="bg-[#ff2d95] text-white text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1 font-bold">
+                                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                                    </span>
+                                                )}
+                                                <span className="text-[10px] text-white/40 font-mono">
+                                                    {new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
                                         </div>
                                         <p className="text-xs text-white/50 truncate w-full">{conv.content}</p>
                                     </button>
@@ -303,9 +401,10 @@ export default function MessagesPage() {
                             <div className="flex flex-col">
                                 <h3 className="text-sm font-bold text-[#e0d4ff] flex items-center gap-2">
                                     {selectedUser.name || 'User'}
+                                    {selectedUser.username && <span className="text-xs text-[#00ffff] font-mono">@{selectedUser.username}</span>}
                                     {isFriend && <span className="bg-[#00ffff]/10 text-[#00ffff] px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider border border-[#00ffff]/20">Friend</span>}
                                 </h3>
-                                <span className="text-xs text-[#a855f7] font-mono">{selectedUser.stx_address}</span>
+                                <span className="text-[10px] text-[#a855f7] font-mono mt-0.5">{selectedUser.stx_address}</span>
                             </div>
                         </div>
 
@@ -339,17 +438,40 @@ export default function MessagesPage() {
 
                             {(isFriend || selectedUser.stx_address === address) && (
                                 <>
+                                    {nextCursor && (
+                                        <div className="w-full flex justify-center pb-4">
+                                            <button
+                                                onClick={handleLoadMore}
+                                                disabled={isLoadingMore}
+                                                className="px-4 py-1.5 bg-[#1a1a20] hover:bg-[#2a2a30] text-xs font-bold text-white/70 rounded-full transition-colors border border-[#2a2a30] disabled:opacity-50"
+                                            >
+                                                {isLoadingMore ? "Loading..." : "Load older messages"}
+                                            </button>
+                                        </div>
+                                    )}
                                     {messages.map((m) => {
                                         const isMe = m.sender_address === address;
                                         return (
                                             <div key={m.id} className={cn("flex w-full", isMe ? "justify-end" : "justify-start")}>
                                                 <div className={cn(
-                                                    "max-w-[70%] rounded-2xl px-4 py-2 text-sm shadow-md",
+                                                    "max-w-[70%] rounded-2xl px-4 py-2 text-sm shadow-md flex items-end gap-2",
                                                     isMe
                                                         ? "bg-gradient-to-r from-[#a855f7] to-[#8b5cf6] text-white rounded-br-none"
                                                         : "bg-[#1a1a20] text-[#e0d4ff] border border-[#2a2a30] rounded-bl-none"
                                                 )}>
-                                                    {m.content}
+                                                    <div className="flex flex-col gap-1">
+                                                        {m.attachment_url && (
+                                                            <div className="relative rounded-xl overflow-hidden mb-1 max-w-[200px]">
+                                                                <img src={m.attachment_url} alt="attachment" className="w-full h-auto object-cover" />
+                                                            </div>
+                                                        )}
+                                                        {m.content && <span>{m.content}</span>}
+                                                    </div>
+                                                    {isMe && (
+                                                        <span className="text-[10px] opacity-70 mb-0.5 shrink-0 ml-1">
+                                                            {m.is_read ? '✔✔' : '✔'}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -359,6 +481,15 @@ export default function MessagesPage() {
                                             Start the conversation with {selectedUser.stx_address.slice(0, 8)}...
                                         </div>
                                     )}
+                                    {otherIsTyping && (
+                                        <div className="flex w-full justify-start mt-2">
+                                            <div className="bg-[#1a1a20] border border-[#2a2a30] text-[#e0d4ff] rounded-2xl rounded-bl-none px-4 py-3 text-sm shadow-md flex items-center gap-1 w-16">
+                                                <span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                                <span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                                <span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce"></span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -366,21 +497,54 @@ export default function MessagesPage() {
                         {/* Input Area */}
                         {(isFriend || selectedUser.stx_address === address) && (
                             <div className="p-4 border-t border-[#2a2a30] bg-[#0f0f13]">
-                                <form onSubmit={handleSend} className="relative flex items-center">
+                                {attachment.isUploading && (
+                                    <div className="mb-2 text-xs text-[#00ffff] px-4">Uploading attachment...</div>
+                                )}
+                                {attachment.url && (
+                                    <div className="mb-2 px-4 relative inline-block">
+                                        <div className="w-16 h-16 rounded-lg overflow-hidden border border-[#2a2a30]">
+                                            <img src={attachment.url} alt="preview" className="w-full h-full object-cover" />
+                                        </div>
+                                        <button
+                                            onClick={() => setAttachment({ file: null, url: null, isUploading: false })}
+                                            className="absolute -top-1.5 -right-1.5 bg-[#ff2d95] text-white rounded-full p-0.5 hover:scale-110 transition-transform"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                )}
+                                <form onSubmit={handleSend} className="relative flex items-center gap-2">
                                     <input
-                                        type="text"
-                                        value={newMessage}
-                                        onChange={e => setNewMessage(e.target.value)}
-                                        placeholder="Type a message..."
-                                        className="w-full bg-[#1a1a20] border border-[#2a2a30] rounded-full py-3 pl-5 pr-12 text-sm text-white placeholder:text-white/30 focus:border-[#00ffff] focus:ring-1 focus:ring-[#00ffff]/50 outline-none transition-all"
+                                        type="file"
+                                        ref={fileInputRef}
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={handleFileUpload}
                                     />
                                     <button
-                                        type="submit"
-                                        disabled={!newMessage.trim()}
-                                        className="absolute right-2 p-2 bg-[#00ffff] text-black rounded-full hover:bg-white disabled:opacity-50 transition-colors"
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={attachment.isUploading}
+                                        className="p-3 bg-[#1a1a20] text-white/50 rounded-full hover:bg-[#2a2a30] hover:text-[#00ffff] transition-colors shrink-0 disabled:opacity-50"
                                     >
-                                        <Send className="w-4 h-4" />
+                                        <ImageIcon className="w-5 h-5" />
                                     </button>
+                                    <div className="relative flex-1">
+                                        <input
+                                            type="text"
+                                            value={newMessage}
+                                            onChange={handleNewMessageChange}
+                                            placeholder="Type a message..."
+                                            className="w-full bg-[#1a1a20] border border-[#2a2a30] rounded-full py-3 px-5 pr-12 text-sm text-white placeholder:text-white/30 focus:border-[#00ffff] focus:ring-1 focus:ring-[#00ffff]/50 outline-none transition-all"
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={(!newMessage.trim() && !attachment.url) || attachment.isUploading}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-[#00ffff] text-black rounded-full hover:bg-white disabled:opacity-50 transition-colors"
+                                        >
+                                            <Send className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </form>
                             </div>
                         )}

@@ -72,6 +72,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/messages', [MessageController::class, 'index']);
     Route::get('/messages/{address}', [MessageController::class, 'history']);
     Route::post('/messages', [MessageController::class, 'store']);
+    Route::post('/messages/typing', [MessageController::class, 'typing']);
+    Route::put('/messages/read-all', [MessageController::class, 'readAll']);
+    Route::put('/messages/{id}/read', [MessageController::class, 'read']);
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);

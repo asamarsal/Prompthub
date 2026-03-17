@@ -17,6 +17,7 @@ class User extends Authenticatable
         'stx_address',
         'email',
         'google_id',
+        'username',
         'name',
         'bio',
         'avatar_url',

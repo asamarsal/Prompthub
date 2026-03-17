@@ -24,6 +24,7 @@ export function getProvider() {
 export type UserRole = "artist" | "brand" | "buyer"
 
 export interface UserProfile {
+  username: string
   name: string
   bio: string
   avatar: string         // URL or empty string
@@ -46,6 +47,7 @@ export const ROLE_ICONS: Record<UserRole, string> = {
 }
 
 const DEFAULT_PROFILE: UserProfile = {
+  username: "",
   name: "",
   bio: "",
   avatar: "",
@@ -120,6 +122,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         const merged: UserProfile = {
           ...DEFAULT_PROFILE,
           ...profile,
+          username: user.username ?? profile.username,
           name: user.name ?? profile.name,
           bio: user.bio ?? profile.bio,
           avatarUrl: user.avatar_url ?? profile.avatarUrl,
@@ -150,6 +153,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const merged: UserProfile = {
         ...DEFAULT_PROFILE,
         ...localProfile,
+        username: user.username ?? localProfile.username,
         name: user.name ?? localProfile.name,
         bio: user.bio ?? localProfile.bio,
         avatarUrl: user.avatar_url ?? localProfile.avatarUrl,
@@ -209,6 +213,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // Persist to backend
     try {
       await apiUpdateProfile({
+        username: profile.username,
         name: profile.name,
         bio: profile.bio,
         avatar_url: profile.avatarUrl || undefined,

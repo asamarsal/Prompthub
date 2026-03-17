@@ -15,12 +15,22 @@ class MessageController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
             
+        // First get unread count per user
+        $unreadCounts = [];
+        foreach ($messages as $msg) {
+            if ($msg->receiver_address === $address && !$msg->is_read) {
+                $unreadCounts[$msg->sender_address] = ($unreadCounts[$msg->sender_address] ?? 0) + 1;
+            }
+        }
+            
         // Group by conversation
         $conversations = [];
         foreach ($messages as $msg) {
             $other = $msg->sender_address === $address ? $msg->receiver_address : $msg->sender_address;
             if (!isset($conversations[$other])) {
-                $conversations[$other] = $msg;
+                $mArray = $msg->toArray();
+                $mArray['unread_count'] = $unreadCounts[$other] ?? 0;
+                $conversations[$other] = $mArray;
             }
         }
         
@@ -34,7 +44,7 @@ class MessageController extends Controller
                 $q->where('sender_address', $address)->where('receiver_address', $otherAddress);
             })->orWhere(function($q) use ($address, $otherAddress) {
                 $q->where('sender_address', $otherAddress)->where('receiver_address', $address);
-            })->oldest()->get();
+            })->orderBy('created_at', 'desc')->cursorPaginate(50);
             
         return response()->json($messages);
     }
@@ -68,6 +78,64 @@ class MessageController extends Controller
         
         $message = Message::create($validated);
         broadcast(new \App\Events\MessageSent($message));
+
+        // Create notification
+        $sender = $request->user();
+        $senderName = $sender->username ? '@' . $sender->username : ($sender->name ?? 'someone');
+        $notification = \App\Models\Notification::create([
+            'user_address' => $receiver_address,
+            'title' => 'New Message',
+            'message' => '1 unread message from ' . $senderName,
+            'type' => 'message',
+            'link' => '/messages'
+        ]);
+        broadcast(new \App\Events\NotificationSent($notification));
+
         return response()->json($message, 201);
+    }
+    
+    public function typing(Request $request)
+    {
+        $request->validate([
+            'receiver_address' => 'required|string',
+        ]);
+        
+        $sender_address = $request->user()->stx_address ?? 'SP_MOCK';
+        broadcast(new \App\Events\Typing($sender_address, $request->receiver_address));
+        
+        return response()->json(['status' => 'typing sent']);
+    }
+
+    public function readAll(Request $request)
+    {
+        $request->validate([
+            'sender_address' => 'required|string',
+        ]);
+        
+        $receiver_address = $request->user()->stx_address ?? 'SP_MOCK';
+        
+        Message::where('sender_address', $request->sender_address)
+            ->where('receiver_address', $receiver_address)
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+            
+        // We broadcast a signal so the sender knows their messages were read
+        broadcast(new \App\Events\MessageRead('all', $request->sender_address, $receiver_address));
+        
+        return response()->json(['status' => 'marked read']);
+    }
+
+    public function read(Request $request, $id)
+    {
+        $receiver_address = $request->user()->stx_address ?? 'SP_MOCK';
+        
+        $msg = Message::find($id);
+        if ($msg && $msg->receiver_address === $receiver_address && !$msg->is_read) {
+            $msg->is_read = true;
+            $msg->save();
+            broadcast(new \App\Events\MessageRead($msg->id, $msg->sender_address, $receiver_address));
+        }
+        
+        return response()->json(['status' => 'marked read']);
     }
 }
