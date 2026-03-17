@@ -30,7 +30,8 @@ class Prompt extends Model
         'original_content',
         'contract_id',
         'stacks_tx_id',
-        'currency'
+        'currency',
+        'additional_info'
     ];
 
     protected $casts = [
@@ -41,7 +42,8 @@ class Prompt extends Model
         'is_curated' => 'boolean',
         'royalty_percentage' => 'integer',
         'total_sold' => 'integer',
-        'contract_id' => 'integer'
+        'contract_id' => 'integer',
+        'additional_info' => 'array'
     ];
 
     public function user()

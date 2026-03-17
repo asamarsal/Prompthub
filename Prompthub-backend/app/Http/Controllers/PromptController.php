@@ -99,6 +99,7 @@ class PromptController extends Controller
             'royalty_percentage' => 'nullable|integer|min:0|max:100',
             'stacks_tx_id' => 'nullable|string',
             'currency' => 'nullable|string|in:STX,sBTC',
+            'additional_info' => 'nullable|array',
         ]);
         
         $validated['id'] = (string) \Illuminate\Support\Str::uuid();
