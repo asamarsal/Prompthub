@@ -181,6 +181,7 @@ export async function uploadMetadata(data: {
 // ─── Auth ─────────────────────────────────────────────────────────────────
 
 export interface ApiUser {
+    id?: number
     stx_address: string
     username: string | null
     name: string | null
@@ -233,6 +234,14 @@ export async function fetchUserByAddress(address: string): Promise<ApiUser> {
  */
 export async function fetchArtists(): Promise<any[]> {
     return request<any[]>("/api/artists")
+}
+
+/**
+ * GET /api/artists/{id}/reviews
+ * Returns reviews left by clients on a specific artist's database record.
+ */
+export async function getArtistReviews(artistId: number): Promise<any> {
+    return request<any>(`/api/artists/${artistId}/reviews`)
 }
 
 /**

@@ -4,16 +4,27 @@ import { useState, useEffect, use } from "react"
 import Link from "next/link"
 import { Star, BadgeCheck, ArrowLeft, Loader2 } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
-import { fetchUserByAddress, ApiUser } from "@/lib/api"
+import { fetchUserByAddress, ApiUser, getPrompts, getArtistReviews } from "@/lib/api"
 
 export default function ArtistPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     const [user, setUser] = useState<ApiUser | null>(null)
+    const [portfolio, setPortfolio] = useState<any[]>([])
+    const [reviews, setReviews] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetchUserByAddress(id)
-            .then(data => setUser(data))
+        Promise.all([
+            fetchUserByAddress(id),
+            getPrompts({ user_address: id })
+        ])
+            .then(([userData, promptsData]) => {
+                setUser(userData)
+                setPortfolio(promptsData?.data || [])
+                if (userData?.id) {
+                    getArtistReviews(userData.id).then(r => setReviews(r?.data || []))
+                }
+            })
             .catch(err => console.error("Missing artist record:", err))
             .finally(() => setLoading(false))
     }, [id])
@@ -46,14 +57,7 @@ export default function ArtistPage({ params }: { params: Promise<{ id: string }>
         hourlyRate: user.hourly_rate || 0.002,
         currency: user.hourly_rate_currency || "sBTC",
         tools: ['Midjourney v6', 'DALL-E 3'],
-        specialties: ['Prompt Engineering'],
-        portfolio: [
-            {
-                image: user.cover_url || "https://images.unsplash.com/photo-1620061546252-78d12ee9ae89?q=80&w=2564&auto=format&fit=crop",
-                title: "Showcase",
-                category: "Artwork"
-            }
-        ]
+        specialties: ['Prompt Engineering']
     }
 
     return (
@@ -147,43 +151,51 @@ export default function ArtistPage({ params }: { params: Promise<{ id: string }>
                         <h2 className="text-2xl font-extrabold text-white uppercase">Portfolio</h2>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            {artist.portfolio.map((item, i) => (
-                                <div key={i} className="group relative border border-[#2a2a30] overflow-hidden bg-[#0d0d0d] hover:border-[#ff2d95] transition-all">
+                            {portfolio.length === 0 && (
+                                <div className="col-span-2 text-white/30 text-sm py-8 border border-dashed border-white/10 flex items-center justify-center">
+                                    No marketplace prompts listed yet
+                                </div>
+                            )}
+                            {portfolio.map((item, i) => (
+                                <Link href={`/prompts/${item.id}`} key={i} className="group relative border border-[#2a2a30] overflow-hidden bg-[#0d0d0d] hover:border-[#ff2d95] transition-all block">
                                     <div className="relative h-52 overflow-hidden">
-                                        <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                        <img src={item.preview_image_url || "https://images.unsplash.com/photo-1620061546252-78d12ee9ae89?q=80&w=2564&auto=format&fit=crop"} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 bg-[#1a1a1e]" />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                                        <span className="absolute bottom-3 left-3 text-[10px] font-mono px-2 py-0.5 bg-[#ff2d95]/20 border border-[#ff2d95]/40 text-[#ff2d95] uppercase">{item.category}</span>
+                                        <span className="absolute bottom-3 left-3 text-[10px] font-mono px-2 py-0.5 bg-[#ff2d95]/20 border border-[#ff2d95]/40 text-[#ff2d95] uppercase">{item.category || "AI Prompt"}</span>
                                     </div>
                                     <div className="p-3">
-                                        <p className="text-sm font-bold text-white uppercase">{item.title}</p>
+                                        <p className="text-sm font-bold text-white uppercase truncate">{item.title}</p>
                                     </div>
-                                </div>
+                                </Link>
                             ))}
                         </div>
 
-                        {/* Reviews placeholder */}
-                        <div className="bg-[#0d0d0d] border border-[#2a2a30] p-6">
+                        {/* Client Reviews */}
+                        <div className="bg-[#0d0d0d] border border-[#2a2a30] p-6 mt-8">
                             <h3 className="text-lg font-extrabold text-white uppercase mb-4 flex items-center gap-2">
                                 <Star className="w-4 h-4 fill-[#ff2d95] text-[#ff2d95]" />
                                 Client Reviews
                             </h3>
-                            {[
-                                { name: "CryptoProject DAO", text: "Absolutely incredible work. Delivered beyond our expectations, on time and with great communication.", rating: 5 },
-                                { name: "PixelVault Studio", text: "Yuki understood our vision immediately. The visuals are stunning and perfectly on-brand.", rating: 5 },
-                                { name: "MetaFashion Inc.", text: "Professional, fast, and creative. Will definitely hire again for our next campaign.", rating: 4 },
-                            ].slice(0, 3).map((r, i) => (
-                                <div key={i} className="py-4 border-b border-[#2a2a30] last:border-0">
-                                    <div className="flex items-center justify-between mb-1.5">
-                                        <span className="text-sm font-bold text-white">{r.name}</span>
-                                        <div className="flex">
-                                            {Array.from({ length: r.rating }).map((_, j) => (
-                                                <Star key={j} className="w-3 h-3 fill-[#ff2d95] text-[#ff2d95]" />
-                                            ))}
+                            {reviews.length === 0 ? (
+                                <p className="text-xs text-white/30 italic">No reviews yet. Hire this artist to be the first!</p>
+                            ) : (
+                                reviews.map((r, i) => (
+                                    <div key={i} className="py-4 border-b border-[#2a2a30] last:border-0 last:pb-0">
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <span className="text-sm font-bold text-white max-w-[200px] truncate">{r.reviewer?.name || "Client"}</span>
+                                            <div className="flex shrink-0">
+                                                {Array.from({ length: r.rating }).map((_, j) => (
+                                                    <Star key={j} className="w-3 h-3 fill-[#ff2d95] text-[#ff2d95]" />
+                                                ))}
+                                                {Array.from({ length: 5 - r.rating }).map((_, j) => (
+                                                    <Star key={j + 10} className="w-3 h-3 text-white/10" />
+                                                ))}
+                                            </div>
                                         </div>
+                                        <p className="text-xs text-white/60 leading-relaxed">{r.comment}</p>
                                     </div>
-                                    <p className="text-xs text-white/50">{r.text}</p>
-                                </div>
-                            ))}
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>

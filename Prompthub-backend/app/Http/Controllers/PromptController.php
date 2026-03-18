@@ -17,6 +17,13 @@ class PromptController extends Controller
             }]);
         }
 
+        // Filter by user address (for Portfolio)
+        if ($request->has('user_address')) {
+            $query->whereHas('user', function($q) use ($request) {
+                $q->where('stx_address', $request->user_address);
+            });
+        }
+
         // Filter by category
         if ($request->has('category')) {
             $query->where('category', $request->category);

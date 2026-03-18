@@ -9,6 +9,7 @@ import { useWallet, truncateAddress, ROLE_LABELS, ROLE_ICONS, type UserRole } fr
 import { RoleOnboardingModal } from "@/components/role-onboarding-modal"
 import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import { useNotifications } from "@/hooks/use-notifications"
+import { toast } from "sonner"
 
 const navLinks = [
   { href: "/marketplace", label: "MARKETPLACE", icon: Search },
@@ -37,6 +38,7 @@ export function Navigation() {
     if (!address) return
     navigator.clipboard.writeText(address)
     setCopied(true)
+    toast.success("Wallet address copied to clipboard!")
     setTimeout(() => setCopied(false), 2000)
   }
 
@@ -197,7 +199,15 @@ export function Navigation() {
                             Available for hire
                           </span>
                           <button
-                            onClick={() => saveProfile({ ...profile, isAvailableForFreelance: !profile.isAvailableForFreelance })}
+                            onClick={() => {
+                              const newStatus = !profile.isAvailableForFreelance;
+                              saveProfile({ ...profile, isAvailableForFreelance: newStatus });
+                              if (newStatus) {
+                                toast.success("Status updated to Available!");
+                              } else {
+                                toast("You are now taking a break.");
+                              }
+                            }}
                             title={profile.isAvailableForFreelance ? "Set status to BUSY" : "Set status to AVAILABLE"}
                             className={cn(
                               "w-9 h-5 rounded-full relative transition-colors shadow-inner",
