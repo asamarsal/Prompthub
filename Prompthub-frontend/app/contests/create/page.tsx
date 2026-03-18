@@ -57,7 +57,7 @@ export default function CreateContestPage() {
 
             await openContractCall({
                 network: STACKS_TESTNET,
-                contractAddress: "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM", // Placeholder Testnet Address
+                contractAddress: "ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT", // Placeholder Testnet Address
                 contractName: "prompthub-contests",
                 functionName: "fund-contest",
                 functionArgs: [
@@ -70,7 +70,7 @@ export default function CreateContestPage() {
                     uintCV(tier5),
                     uintCV(100000), // mock future block height
                     stringAsciiCV(currency),
-                    contractPrincipalCV("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM", "sbtc-token")
+                    contractPrincipalCV("ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT", "sbtc-token")
                 ],
                 postConditionMode: PostConditionMode.Allow,
                 onFinish: async (data) => {

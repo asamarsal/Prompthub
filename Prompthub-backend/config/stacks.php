@@ -2,5 +2,5 @@
 
 return [
     'network' => env('STACKS_NETWORK', 'testnet'),
-    'marketplace_contract_address' => env('MARKETPLACE_CONTRACT_ADDRESS', 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM'),
+    'marketplace_contract_address' => env('MARKETPLACE_CONTRACT_ADDRESS', 'ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT'),
 ];

@@ -31,7 +31,7 @@ export function PurchaseModal({
     ? STACKS_MOCKNET
     : STACKS_TESTNET
 
-  const contractAddress = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM'
+  const contractAddress = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || 'ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT'
   const contractName = 'prompthub-marketplace'
 
   const platformFee = prompt.price * 0.025
