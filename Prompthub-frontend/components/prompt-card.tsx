@@ -18,9 +18,9 @@ const categoryIcons: Record<string, string> = {
   "Video Generation": "VID",
 }
 
-export function PromptCard({ prompt }: { prompt: Prompt }) {
+export function PromptCard({ prompt }: { prompt: Prompt & { isBookmarked?: boolean } }) {
   const router = useRouter()
-  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [isBookmarked, setIsBookmarked] = useState(prompt.isBookmarked || false)
   const [loading, setLoading] = useState(false)
   const { price: stxPrice } = useStacksPrice()
 
@@ -166,12 +166,12 @@ export function PromptCard({ prompt }: { prompt: Prompt }) {
                 </svg>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-[1.4rem] font-display font-black leading-none tracking-tight text-[#ff2d95]">
-                    {prompt.price.toFixed(3)}
+                    {typeof prompt.price === 'number' ? prompt.price.toFixed(3) : "0.000"}
                   </span>
                   <span className="text-sm font-display font-bold text-[#ff2d95]">sBTC</span>
                 </div>
                 <span className="text-[10px] font-mono text-muted-foreground ml-2">
-                  ~${(prompt.price * stxPrice).toFixed(2)} USD
+                  ~${((typeof prompt.price === 'number' ? prompt.price : 0) * stxPrice).toFixed(2)} USD
                 </span>
               </div>
             </div>

@@ -15,6 +15,16 @@ class TransactionController extends Controller
         //
     }
 
+    public function promptHistory($promptId)
+    {
+        $transactions = Transaction::with('buyer:stx_address,name,avatar_url')
+            ->where('prompt_id', $promptId)
+            ->latest()
+            ->paginate(12);
+
+        return response()->json($transactions);
+    }
+
     /**
      * Store a newly created resource in storage.
      */

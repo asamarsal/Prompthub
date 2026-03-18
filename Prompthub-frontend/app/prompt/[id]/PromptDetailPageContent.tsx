@@ -7,7 +7,7 @@ import { PromptCard } from "@/components/prompt-card"
 import { PurchaseModal } from "@/components/purchase-modal"
 import { prompts as mockPrompts } from "@/lib/mock-data"
 import { ChevronRight, Check, Copy, Heart, Share2, Star, ExternalLink, Zap, Lock, BadgeCheck, Clock, Unlock, Loader2 } from "lucide-react"
-import { getPrompt, toggleBookmark, getReviews, fetchPremiumContent } from "@/lib/api"
+import { getPrompt, toggleBookmark, fetchPremiumContent } from "@/lib/api"
 import { useWallet } from "@/lib/wallet-context"
 import { useStacksPrice } from "@/lib/hooks/use-stacks-price"
 import { openSTXTransfer } from "@stacks/connect"
@@ -38,8 +38,11 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
     const [activeTab, setActiveTab] = useState<"description" | "reviews" | "history" | any>("description")
     const [isBookmarked, setIsBookmarked] = useState(false)
     const [reviews, setReviews] = useState<any[]>([])
+    const [transactions, setTransactions] = useState<any[]>([])
     const { price: stxPrice } = useStacksPrice()
     const [bookmarkLoading, setBookmarkLoading] = useState(false)
+    const [reviewsLoading, setReviewsLoading] = useState(false)
+    const [txLoading, setTxLoading] = useState(false)
 
     const [premiumContent, setPremiumContent] = useState<string | null>(null)
     const [unlockLoading, setUnlockLoading] = useState(false)
@@ -59,7 +62,7 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                     model: res.ai_model,
                     category: res.category,
                     sales: res.total_sold,
-                    reviews: 5,
+                    reviewsCount: 0, // Will be updated by separate fetch
                     rating: 4.5,
                     license: res.license_type,
                     royalty: res.royalty || 5, // Default royalty if null
@@ -74,6 +77,7 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                     txId: res.stacks_tx_id,
                     cid: res.cid_ipfs,
                 })
+                setIsBookmarked(!!res.is_bookmarked)
             } catch (err) {
                 console.error("Failed to fetch prompt", err)
             } finally {
@@ -82,6 +86,28 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
         }
         fetchDetails()
     }, [id])
+
+    useEffect(() => {
+        if (activeTab === "reviews" && id) {
+            setReviewsLoading(true)
+            import("@/lib/api").then(api => api.getPromptReviews(id))
+                .then(res => {
+                    setReviews(res.data || [])
+                    if (prompt) {
+                        setPrompt((prev: any) => ({ ...prev, reviewsCount: res.total || res.data?.length || 0 }))
+                    }
+                })
+                .catch(err => console.error("Failed to fetch reviews", err))
+                .finally(() => setReviewsLoading(false))
+        }
+        if (activeTab === "history" && id) {
+            setTxLoading(true)
+            import("@/lib/api").then(api => api.getPromptTransactions(id))
+                .then(res => setTransactions(res.data || []))
+                .catch(err => console.error("Failed to fetch transactions", err))
+                .finally(() => setTxLoading(false))
+        }
+    }, [activeTab, id])
 
     const handleToggleBookmark = async () => {
         if (bookmarkLoading || !prompt) return
@@ -252,7 +278,7 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                                             : "text-[#a78bfa] hover:text-[#e0d4ff] hover:bg-[#16161a]"
                                             }`}
                                     >
-                                        {tab === "description" ? "Description" : tab === "reviews" ? `Reviews (${mockReviews.length})` : "Tx History"}
+                                        {tab === "description" ? "Description" : tab === "reviews" ? `Reviews (${prompt.reviewsCount || 0})` : "Tx History"}
                                     </button>
                                 ))}
                             </div>
@@ -343,57 +369,73 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
 
                                 {activeTab === "reviews" && (
                                     <div className="flex flex-col gap-4">
-                                        {mockReviews.map((review) => (
-                                            <div key={review.id} className="bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] p-4">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff2d95] to-[#a855f7]" />
-                                                        <div>
-                                                            <p className="text-sm font-bold text-[#e0d4ff] flex items-center gap-1">
-                                                                {review.userName}
-                                                                {review.verified && <BadgeCheck className="w-3.5 h-3.5 text-[#00ffff]" />}
-                                                            </p>
-                                                            <p className="text-xs text-[#a78bfa]/50 font-mono">{review.date}</p>
+                                        {reviewsLoading ? (
+                                            <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-[#ff2d95]" /></div>
+                                        ) : reviews.length > 0 ? (
+                                            reviews.map((review) => (
+                                                <div key={review.id} className="bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] p-4">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff2d95] to-[#a855f7]" overflow-hidden>
+                                                                {review.reviewer?.avatar_url && <img src={review.reviewer.avatar_url} className="w-full h-full object-cover" />}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-bold text-[#e0d4ff] flex items-center gap-1">
+                                                                    {review.reviewer?.name || (review.reviewer_address ? `${review.reviewer_address.slice(0, 6)}...${review.reviewer_address.slice(-4)}` : "User")}
+                                                                    <BadgeCheck className="w-3.5 h-3.5 text-[#00ffff]" />
+                                                                </p>
+                                                                <p className="text-xs text-[#a78bfa]/50 font-mono">{new Date(review.created_at).toLocaleDateString()}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-0.5">
+                                                            {Array.from({ length: 5 }).map((_, i) => (
+                                                                <Star
+                                                                    key={i}
+                                                                    className={`w-3.5 h-3.5 ${i < review.rating ? "text-[#ff6b2b] fill-[#ff6b2b]" : "text-[#a78bfa]/30"}`}
+                                                                />
+                                                            ))}
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-0.5">
-                                                        {Array.from({ length: 5 }).map((_, i) => (
-                                                            <Star
-                                                                key={i}
-                                                                className={`w-3.5 h-3.5 ${i < review.rating ? "text-[#ff6b2b] fill-[#ff6b2b]" : "text-[#a78bfa]/30"}`}
-                                                            />
-                                                        ))}
-                                                    </div>
+                                                    <p className="text-sm text-[#a78bfa]">{review.comment}</p>
                                                 </div>
-                                                <p className="text-sm text-[#a78bfa]">{review.comment}</p>
-                                            </div>
-                                        ))}
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-10 text-[#a78bfa] border-2 border-dashed border-[#2a2a30]">No reviews yet.</div>
+                                        )}
                                     </div>
                                 )}
 
                                 {activeTab === "history" && (
                                     <div className="overflow-x-auto">
-                                        <table className="w-full text-sm">
-                                            <thead>
-                                                <tr className="text-[#a78bfa]/50 text-left text-xs font-mono uppercase">
-                                                    <th className="pb-3 font-semibold">Buyer</th>
-                                                    <th className="pb-3 font-semibold">Price</th>
-                                                    <th className="pb-3 font-semibold">Date</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {mockTxHistory.map((tx, i) => (
-                                                    <tr key={i} className="border-t border-[rgba(180,120,255,0.08)]">
-                                                        <td className="py-3 font-mono text-[#a78bfa]">{tx.buyer}</td>
-                                                        <td className="py-3 text-[#00ffff] font-bold">{tx.price} STX</td>
-                                                        <td className="py-3 text-[#a78bfa]/50 flex items-center gap-1 font-mono">
-                                                            <Clock className="w-3 h-3" />
-                                                            {tx.date}
-                                                        </td>
+                                        {txLoading ? (
+                                            <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-[#ff2d95]" /></div>
+                                        ) : transactions.length > 0 ? (
+                                            <table className="w-full text-sm">
+                                                <thead>
+                                                    <tr className="text-[#a78bfa]/50 text-left text-xs font-mono uppercase">
+                                                        <th className="pb-3 font-semibold">Buyer</th>
+                                                        <th className="pb-3 font-semibold">Price</th>
+                                                        <th className="pb-3 font-semibold">Date</th>
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                                </thead>
+                                                <tbody>
+                                                    {transactions.map((tx, i) => (
+                                                        <tr key={i} className="border-t border-[rgba(180,120,255,0.08)]">
+                                                            <td className="py-3 font-mono text-[#a78bfa]">
+                                                                {tx.buyer?.name || `${tx.buyer_address.slice(0, 6)}...${tx.buyer_address.slice(-4)}`}
+                                                            </td>
+                                                            <td className="py-3 text-[#00ffff] font-bold">{tx.amount_paid} {tx.currency || "STX"}</td>
+                                                            <td className="py-3 text-[#a78bfa]/50 flex items-center gap-1 font-mono">
+                                                                <Clock className="w-3 h-3" />
+                                                                {new Date(tx.created_at).toLocaleString()}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        ) : (
+                                            <div className="text-center py-10 text-[#a78bfa] border-2 border-dashed border-[#2a2a30]">No transaction history found.</div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -422,13 +464,13 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                                 <div className="mb-6">
                                     <p className="text-xs text-[#a78bfa] mb-1 font-mono uppercase">Current Price</p>
                                     <div className="flex items-baseline">
-                                        <p className="text-4xl font-extrabold text-[#00ffff]">{prompt.price}</p>
+                                        <p className="text-4xl font-extrabold text-[#00ffff]">{typeof prompt.price === 'number' ? prompt.price : '0.000'}</p>
                                         <span className="text-xl font-display font-bold text-white uppercase ml-2">{prompt.currency || "STX"}</span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <p className="text-[#a78bfa] font-mono text-sm leading-none mt-1">
-                                        ~${(prompt.price * stxPrice).toFixed(2)} USD
+                                        ~${((typeof prompt.price === 'number' ? prompt.price : 0) * stxPrice).toFixed(2)} USD
                                     </p>
                                     <a
                                         href="https://coinmarketcap.com/id/currencies/stacks/"

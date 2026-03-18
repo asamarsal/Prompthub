@@ -14,7 +14,7 @@ const PromptDetailPageContent = dynamic(
         <div className="flex flex-col items-center justify-center py-40 space-y-4">
           <Loader2 className="w-12 h-12 text-[#ff2d95] animate-spin" />
           <h3 className="text-xl font-bold font-display tracking-widest text-[#e0d4ff] uppercase">
-            Syncing with Neural Network...
+            Now Loading...
           </h3>
         </div>
       </AppShell>

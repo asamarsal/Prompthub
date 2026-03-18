@@ -75,6 +75,7 @@ export default function MarketplacePage() {
           rating: 4.5, // Mock rating
           isCurated: p.is_curated,
           isNsfw: p.is_nsfw,
+          isBookmarked: !!p.is_bookmarked,
           license: p.license_type,
           createdAt: p.created_at
         }))

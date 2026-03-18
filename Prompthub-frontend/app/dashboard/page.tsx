@@ -2,8 +2,7 @@
 
 import Link from "next/link"
 import { AppShell } from "@/components/app-shell"
-import { dashboardData, prompts } from "@/lib/mock-data"
-import { Activity, ArrowUpRight, Clock, Copy, DollarSign, Download, Eye, MoreHorizontal, Settings, TrendingUp, User, ShoppingCart, FileText, Star, Plus, BarChart3, ToggleRight } from "lucide-react"
+import { Activity, ArrowUpRight, Clock, Copy, DollarSign, Download, Eye, MoreHorizontal, Settings, TrendingUp, User, ShoppingCart, FileText, Star, Plus, BarChart3, ToggleRight, Loader2 } from "lucide-react"
 import {
   XAxis,
   YAxis,
@@ -13,46 +12,12 @@ import {
   Area,
   AreaChart,
 } from "recharts"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { getDashboardData } from "@/lib/api"
+import { useStacksPrice } from "@/lib/hooks/use-stacks-price"
+import { cn } from "@/lib/utils"
 
-const statCards = [
-  {
-    label: "Total Earnings",
-    value: `${dashboardData.totalEarnings} sBTC`,
-    subvalue: `~$${(dashboardData.totalEarnings * 65000).toFixed(0)} USD`,
-    icon: TrendingUp,
-    color: "from-[#b4ff39] to-[#00ffff]",
-    textColor: "text-[#b4ff39]",
-    hoverClass: "hover:border-[#b4ff39] hover:shadow-[inset_0_0_0_1px_#b4ff39,8px_8px_0px_0px_#b4ff39]",
-  },
-  {
-    label: "Total Sales",
-    value: dashboardData.totalSales.toString(),
-    subvalue: "All time",
-    icon: ShoppingCart,
-    color: "from-[#00ffff] to-[#a855f7]",
-    textColor: "text-[#00ffff]",
-    hoverClass: "hover:border-[#00ffff] hover:shadow-[inset_0_0_0_1px_#00ffff,8px_8px_0px_0px_#00ffff]",
-  },
-  {
-    label: "Active Prompts",
-    value: dashboardData.activePrompts.toString(),
-    subvalue: "Currently listed",
-    icon: FileText,
-    color: "from-[#ff2d95] to-[#a855f7]",
-    textColor: "text-[#ff2d95]",
-    hoverClass: "hover:border-[#ff2d95] hover:shadow-[inset_0_0_0_1px_#ff2d95,8px_8px_0px_0px_#ff2d95]",
-  },
-  {
-    label: "Avg. Rating",
-    value: dashboardData.averageRating.toString(),
-    subvalue: "From 89 reviews",
-    icon: Star,
-    color: "from-[#ff6b2b] to-[#ff2d95]",
-    textColor: "text-[#ff6b2b]",
-    hoverClass: "hover:border-[#ff6b2b] hover:shadow-[inset_0_0_0_1px_#ff6b2b,8px_8px_0px_0px_#ff6b2b]",
-  },
-]
+
 
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
   if (active && payload && payload.length) {
@@ -68,7 +33,88 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 
 export default function DashboardPage() {
   const [timeRange, setTimeRange] = useState<"7D" | "30D" | "90D" | "All">("30D")
-  const myPrompts = prompts.slice(0, 5)
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const { price: stxPrice } = useStacksPrice()
+
+  const daysMap = {
+    "7D": 7,
+    "30D": 30,
+    "90D": 90,
+    "All": 365
+  }
+
+  useEffect(() => {
+    async function fetchDashboard() {
+      try {
+        setLoading(true)
+        const res = await getDashboardData(daysMap[timeRange])
+        setData(res)
+      } catch (err) {
+        console.error("Failed to fetch dashboard", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchDashboard()
+  }, [timeRange])
+
+  if (loading && !data) {
+    return (
+      <AppShell>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-12 h-12 text-[#ff2d95] animate-spin" />
+        </div>
+      </AppShell>
+    )
+  }
+
+  const stats = data?.stats || {
+    totalEarnings: 0,
+    totalSales: 0,
+    activePrompts: 0,
+    averageRating: 0,
+    reviewsCount: 0
+  }
+
+  const statCards = [
+    {
+      label: "Total Earnings",
+      value: `${stats.totalEarnings.toFixed(3)} sBTC`,
+      subvalue: `~$${(stats.totalEarnings * stxPrice).toFixed(2)} USD`,
+      icon: TrendingUp,
+      color: "from-[#b4ff39] to-[#00ffff]",
+      textColor: "text-[#b4ff39]",
+      hoverClass: "hover:border-[#b4ff39] hover:shadow-[inset_0_0_0_1px_#b4ff39,8px_8px_0px_0px_#b4ff39]",
+    },
+    {
+      label: "Total Sales",
+      value: stats.totalSales.toString(),
+      subvalue: "All time",
+      icon: ShoppingCart,
+      color: "from-[#00ffff] to-[#a855f7]",
+      textColor: "text-[#00ffff]",
+      hoverClass: "hover:border-[#00ffff] hover:shadow-[inset_0_0_0_1px_#00ffff,8px_8px_0px_0px_#00ffff]",
+    },
+    {
+      label: "Active Prompts",
+      value: stats.activePrompts.toString(),
+      subvalue: "Currently listed",
+      icon: FileText,
+      color: "from-[#ff2d95] to-[#a855f7]",
+      textColor: "text-[#ff2d95]",
+      hoverClass: "hover:border-[#ff2d95] hover:shadow-[inset_0_0_0_1px_#ff2d95,8px_8px_0px_0px_#ff2d95]",
+    },
+    {
+      label: "Avg. Rating",
+      value: stats.averageRating.toString(),
+      subvalue: `From ${stats.reviewsCount} reviews`,
+      icon: Star,
+      color: "from-[#ff6b2b] to-[#ff2d95]",
+      textColor: "text-[#ff6b2b]",
+      hoverClass: "hover:border-[#ff6b2b] hover:shadow-[inset_0_0_0_1px_#ff6b2b,8px_8px_0px_0px_#ff6b2b]",
+    },
+  ]
 
   return (
     <AppShell>
@@ -108,17 +154,20 @@ export default function DashboardPage() {
             return (
               <div
                 key={s.label}
-                className={`p-6 transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[140px] border border-[#2a2a30] hover:-translate-x-2 hover:-translate-y-2 backdrop-blur-xl ${s.hoverClass} ${isTotalSales ? "bg-[#160f24]/60" : "bg-[#16161a]/60"
-                  }`}
+                className={cn(
+                  "p-6 transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[140px] border border-[#2a2a30] hover:-translate-x-2 hover:-translate-y-2 backdrop-blur-xl",
+                  s.hoverClass,
+                  isTotalSales ? "bg-[#160f24]/60" : "bg-[#16161a]/60"
+                )}
               >
                 <div className="flex items-start justify-between mb-4">
                   <span className="text-[10px] text-[#a78bfa] font-display font-bold uppercase tracking-widest leading-tight">{s.label}</span>
-                  <div className={`w-8 h-8 bg-gradient-to-br ${s.color} flex items-center justify-center`}>
+                  <div className={cn("w-8 h-8 bg-gradient-to-br flex items-center justify-center", s.color)}>
                     <s.icon className="w-4 h-4 text-[#0a0a0c]" />
                   </div>
                 </div>
                 <div>
-                  <p className={`text-[2rem] leading-none font-extrabold font-display tracking-tight ${s.textColor} mb-1.5`}>{s.value}</p>
+                  <p className={cn("text-[2rem] leading-none font-extrabold font-display tracking-tight mb-1.5", s.textColor)}>{s.value}</p>
                   <p className="text-[10px] text-[#a78bfa]/50 font-mono tracking-wider">{s.subvalue}</p>
                 </div>
               </div>
@@ -135,51 +184,61 @@ export default function DashboardPage() {
                 <button
                   key={range}
                   onClick={() => setTimeRange(range)}
-                  className={`px-3 py-1 text-xs font-display font-bold transition-all ${timeRange === range
-                    ? "bg-[#ff2d95] text-white"
-                    : "text-[#e0d4ff] hover:text-[#00ffff]"
-                    }`}
+                  className={cn(
+                    "px-3 py-1 text-xs font-display font-bold transition-all",
+                    timeRange === range ? "bg-[#ff2d95] text-white" : "text-[#e0d4ff] hover:text-[#00ffff]"
+                  )}
                 >
                   {range}
                 </button>
               ))}
             </div>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dashboardData.earningsHistory}>
-                <defs>
-                  <linearGradient id="earningsFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00ffff" stopOpacity={0.3} />
-                    <stop offset="50%" stopColor="#a855f7" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#ff2d95" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(180,120,255,0.08)" />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fill: "#a78bfa", fontSize: 12 }}
-                  axisLine={{ stroke: "rgba(180,120,255,0.1)" }}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fill: "#a78bfa", fontSize: 12 }}
-                  axisLine={{ stroke: "rgba(180,120,255,0.1)" }}
-                  tickLine={false}
-                  tickFormatter={(v) => `${v}`}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="earnings"
-                  stroke="#00ffff"
-                  strokeWidth={2}
-                  fill="url(#earningsFill)"
-                  dot={{ fill: "#00ffff", strokeWidth: 0, r: 4 }}
-                  activeDot={{ r: 6, fill: "#ff2d95", stroke: "#0a001a", strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-64 relative">
+            {(data?.earningsHistory || []).length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data?.earningsHistory || []}>
+                  <defs>
+                    <linearGradient id="earningsFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00ffff" stopOpacity={0.3} />
+                      <stop offset="50%" stopColor="#a855f7" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#ff2d95" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(180,120,255,0.08)" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fill: "#a78bfa", fontSize: 10 }}
+                    axisLine={{ stroke: "rgba(180,120,255,0.1)" }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: "#a78bfa", fontSize: 10 }}
+                    axisLine={{ stroke: "rgba(180,120,255,0.1)" }}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area
+                    type="monotone"
+                    dataKey="earnings"
+                    stroke="#00ffff"
+                    strokeWidth={2}
+                    fill="url(#earningsFill)"
+                    dot={{ fill: "#00ffff", strokeWidth: 0, r: 4 }}
+                    activeDot={{ r: 6, fill: "#ff2d95", stroke: "#0a001a", strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#ff2d95]/10 flex items-center justify-center">
+                  <BarChart3 className="w-6 h-6 text-[#ff2d95]" />
+                </div>
+                <p className="text-center text-[#a78bfa]/40 font-mono text-xs uppercase tracking-widest">
+                  No earnings data found
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -204,11 +263,11 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {dashboardData.recentSales.map((sale, i) => (
+                  {(data?.recentSales || []).map((sale: any, i: number) => (
                     <tr key={i} className="border-t border-[rgba(180,120,255,0.08)] hover:bg-[rgba(180,120,255,0.04)] transition-colors">
                       <td className="py-3 text-[#e0d4ff] truncate max-w-[140px] font-medium">{sale.prompt}</td>
                       <td className="py-3 text-[#a78bfa] font-mono text-xs">{sale.buyer}</td>
-                      <td className="py-3 text-[#00ffff] font-bold">{sale.price} sBTC</td>
+                      <td className="py-3 text-[#00ffff] font-bold">{parseFloat(sale.price).toFixed(3)} sBTC</td>
                       <td className="py-3">
                         <span
                           className={`px-2.5 py-0.5 text-xs font-bold ${sale.status === "completed"
@@ -221,6 +280,13 @@ export default function DashboardPage() {
                       </td>
                     </tr>
                   ))}
+                  {(!data?.recentSales || data.recentSales.length === 0) && (
+                    <tr>
+                      <td colSpan={4} className="py-10 text-center text-[#a78bfa]/40 font-mono text-xs uppercase tracking-widest">
+                        No recent sales found
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -235,7 +301,7 @@ export default function DashboardPage() {
               </Link>
             </div>
             <div className="flex flex-col gap-3">
-              {myPrompts.map((prompt) => (
+              {(data?.myPrompts || []).map((prompt: any) => (
                 <div key={prompt.id} className="flex items-center gap-3 p-3 hover:bg-[rgba(180,120,255,0.06)] transition-colors">
                   <div className="w-10 h-10 bg-[rgba(180,120,255,0.1)] border border-white/5 flex items-center justify-center shrink-0 overflow-hidden">
                     {prompt.image ? (
@@ -253,10 +319,15 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <button className="text-[#a78bfa] hover:text-[#b4ff39] transition-colors" aria-label="Toggle active">
-                    <ToggleRight className="w-5 h-5 text-[#b4ff39]" />
+                    <ToggleRight className={cn("w-5 h-5", prompt.is_active ? "text-[#b4ff39]" : "text-white/20")} />
                   </button>
                 </div>
               ))}
+              {(!data?.myPrompts || data.myPrompts.length === 0) && (
+                <div className="py-10 text-center text-[#a78bfa]/40 font-mono text-xs uppercase tracking-widest">
+                  No prompts created yet
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -298,11 +298,35 @@ export async function getPrompts(params?: Record<string, string>): Promise<Pagin
 }
 
 /**
+ * GET /api/dashboard
+ * Returns creator dashboard statistics.
+ */
+export async function getDashboardData(days: number = 30): Promise<any> {
+    return request<any>(`/api/dashboard?days=${days}`)
+}
+
+/**
  * GET /api/prompts/{id}
  * Fetches details of a single prompt by its ID.
  */
 export async function getPrompt(id: string): Promise<any> {
     return request<any>(`/api/prompts/${id}`);
+}
+
+/**
+ * GET /api/prompts/{id}/reviews
+ * Fetches reviews for a specific prompt.
+ */
+export async function getPromptReviews(id: string): Promise<any> {
+    return request<any>(`/api/prompts/${id}/reviews`);
+}
+
+/**
+ * GET /api/prompts/{id}/transactions
+ * Fetches transaction history for a specific prompt.
+ */
+export async function getPromptTransactions(id: string): Promise<any> {
+    return request<any>(`/api/prompts/${id}/transactions`);
 }
 
 /**

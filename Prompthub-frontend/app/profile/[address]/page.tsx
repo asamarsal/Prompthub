@@ -128,8 +128,27 @@ function ProfileContent({ params }: { params: { address: string } }) {
             setSavedLoading(true)
             fetchBookmarks()
                 .then(data => {
-                    // Logic to extract data from paginated response
-                    setSavedPrompts(data.data || [])
+                    // Map backend snake_case to frontend camelCase expected by PromptCard
+                    const mapped = (data.data || []).map((p: any) => ({
+                        id: p.id,
+                        title: p.title,
+                        description: p.description,
+                        price: parseFloat(p.price_stx),
+                        image: p.preview_image_url || 'https://images.unsplash.com/photo-1614729939124-032f0b5609ce?w=800&q=80',
+                        model: p.ai_model,
+                        category: p.category,
+                        tags: p.tags || [],
+                        creatorName: p.user?.name || (p.user?.stx_address ? `${p.user.stx_address.slice(0, 4)}...${p.user.stx_address.slice(-4)}` : "Artist"),
+                        creator: p.user?.stx_address || "0xUNKNOWN",
+                        sales: p.total_sold,
+                        rating: 4.5, // Mock rating for now
+                        isCurated: p.is_curated,
+                        isNsfw: p.is_nsfw,
+                        isBookmarked: true,
+                        license: p.license_type,
+                        createdAt: p.created_at
+                    }))
+                    setSavedPrompts(mapped)
                 })
                 .catch(err => console.error(err))
                 .finally(() => setSavedLoading(false))

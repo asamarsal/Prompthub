@@ -11,6 +11,12 @@ class PromptController extends Controller
     {
         $query = Prompt::with('user')->where('is_published', true);
 
+        if ($user = auth('sanctum')->user()) {
+            $query->withExists(['bookmarkedBy as is_bookmarked' => function($q) use ($user) {
+                $q->where('user_id', $user->id);
+            }]);
+        }
+
         // Filter by category
         if ($request->has('category')) {
             $query->where('category', $request->category);
@@ -79,7 +85,15 @@ class PromptController extends Controller
 
     public function show($id)
     {
-        return response()->json(Prompt::with('user')->findOrFail($id));
+        $query = Prompt::with('user');
+
+        if ($user = auth('sanctum')->user()) {
+            $query->withExists(['bookmarkedBy as is_bookmarked' => function($q) use ($user) {
+                $q->where('user_id', $user->id);
+            }]);
+        }
+
+        return response()->json($query->findOrFail($id));
     }
 
     public function store(Request $request)

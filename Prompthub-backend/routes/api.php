@@ -15,6 +15,9 @@ use App\Http\Controllers\UserController;
 
 use App\Http\Controllers\BookmarkController;
 use App\Http\Controllers\ArtistReviewController;
+use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\DashboardController;
 
 Route::post('/auth/login', [AuthController::class, 'login']);
 
@@ -26,6 +29,8 @@ Route::get('/contests/{id}', [ContestController::class, 'show']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/ai-models', [AiModelController::class, 'index']);
 Route::get('/artists/{id}/reviews', [ArtistReviewController::class, 'index']);
+Route::get('/prompts/{id}/reviews', [ReviewController::class, 'index']);
+Route::get('/prompts/{id}/transactions', [TransactionController::class, 'promptHistory']);
 
 // Protected routes (requires Sanctum token)
 Route::middleware('auth:sanctum')->group(function () {
@@ -48,6 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Prompts
     Route::post('/prompts', [PromptController::class, 'store']);
+    Route::post('/prompts/{id}/reviews', [ReviewController::class, 'store']);
     Route::post('/prompts/{id}/verify-purchase', [PromptController::class, 'verifyPurchase']);
     Route::put('/prompts/{id}/curate', [PromptController::class, 'curate']);
     Route::get('/prompts/{id}/content', [PromptController::class, 'getContent'])->middleware('x402');
@@ -81,6 +87,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::put('/notifications/read', [NotificationController::class, 'markAsRead']);
+
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index']);
 
     // Bookmarks
     Route::get('/users/me/bookmarks', [BookmarkController::class, 'index']);

@@ -16,7 +16,7 @@ class BookmarkController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $bookmarks = $user->bookmarkedPrompts()->with('bookmarkedBy')->paginate(12);
+        $bookmarks = $user->bookmarkedPrompts()->with('user')->paginate(12);
         
         return response()->json($bookmarks);
     }
