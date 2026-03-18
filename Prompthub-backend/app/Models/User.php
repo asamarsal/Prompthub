@@ -55,4 +55,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(ArtistReview::class, 'artist_id');
     }
+
+    public function prompts()
+    {
+        return $this->hasMany(Prompt::class, 'user_id');
+    }
 }

@@ -181,6 +181,21 @@ export async function uploadMetadata(data: {
 
 // ─── Auth ─────────────────────────────────────────────────────────────────
 
+export interface ProfileStats {
+    rating: number;
+    projects: number;
+    reviews: number;
+    sold: number;
+}
+
+export interface UserActivity {
+    type: 'prompt' | 'review' | 'contest';
+    text: string;
+    time: string;
+    timestamp: number;
+    icon: string;
+}
+
 export interface ApiUser {
     id?: number
     stx_address: string
@@ -194,6 +209,9 @@ export interface ApiUser {
     hourly_rate?: number
     hourly_rate_currency?: string
     specialization_id?: number[]
+    specialties?: string[]
+    stats?: ProfileStats
+    activities?: UserActivity[]
 }
 
 export interface LoginResponse {

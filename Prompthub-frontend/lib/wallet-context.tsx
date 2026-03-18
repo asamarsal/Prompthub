@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react"
 import { WalletSelectorModal } from "@/components/wallet-selector-modal"
-import { loginWithWallet, updateProfile as apiUpdateProfile, clearApiToken, fetchMe } from "@/lib/api"
+import { loginWithWallet, updateProfile as apiUpdateProfile, clearApiToken, fetchMe, type ProfileStats, type UserActivity } from "@/lib/api"
 
 declare global {
   interface Window {
@@ -24,6 +24,7 @@ export function getProvider() {
 export type UserRole = "artist" | "brand" | "buyer"
 
 export interface UserProfile {
+  id?: number
   username: string
   name: string
   bio: string
@@ -36,6 +37,9 @@ export interface UserProfile {
   hourlyRate: number     // e.g. 0.002
   hourlyRateCurrency: string // "sBTC" | "STX"
   specialization_id: number[]
+  specialties?: string[]
+  stats?: ProfileStats
+  activities?: UserActivity[]
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -51,6 +55,7 @@ export const ROLE_ICONS: Record<UserRole, string> = {
 }
 
 const DEFAULT_PROFILE: UserProfile = {
+  id: 0,
   username: "",
   name: "",
   bio: "",
@@ -63,6 +68,9 @@ const DEFAULT_PROFILE: UserProfile = {
   hourlyRate: 0.002,
   hourlyRateCurrency: "sBTC",
   specialization_id: [],
+  specialties: [],
+  stats: { rating: 0, projects: 0, reviews: 0, sold: 0 },
+  activities: [],
 }
 
 interface WalletState {
@@ -176,6 +184,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         hourlyRate: (user.hourly_rate ? Number(user.hourly_rate) : null) ?? localProfile.hourlyRate ?? 0.002,
         hourlyRateCurrency: user.hourly_rate_currency ?? localProfile.hourlyRateCurrency ?? "sBTC",
         specialization_id: user.specialization_id ?? localProfile.specialization_id ?? [],
+        specialties: user.specialties ?? localProfile.specialties ?? [],
+        stats: user.stats ?? localProfile.stats ?? DEFAULT_PROFILE.stats,
+        activities: user.activities ?? localProfile.activities ?? [],
       }
       localStorage.setItem(PROFILE_KEY, JSON.stringify(merged))
       setWallet({

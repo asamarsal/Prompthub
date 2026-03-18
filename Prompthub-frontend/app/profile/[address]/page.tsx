@@ -2,16 +2,13 @@
 
 import { AppShell } from "@/components/app-shell"
 import { useWallet, truncateAddress, ROLE_LABELS, ROLE_ICONS, type UserRole, type UserProfile } from "@/lib/wallet-context"
-import { artists } from "@/lib/mock-artists"
-import { contests } from "@/lib/mock-contests"
-import { prompts } from "@/lib/mock-data"
 import Link from "next/link"
 import { use, useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Star, BadgeCheck, Trophy, ShoppingBag, Copy, Check, Palette, User, Award, Clock, TrendingUp, Heart } from "lucide-react"
 import { RoleOnboardingModal } from "@/components/role-onboarding-modal"
 import { EditProfileModal } from "@/components/edit-profile-modal"
-import { fetchUserByAddress, fetchBookmarks, type ApiUser } from "@/lib/api"
+import { fetchUserByAddress, fetchBookmarks, getPrompts, getArtistReviews, type ApiUser } from "@/lib/api"
 import { PromptCard } from "@/components/prompt-card"
 
 const roleDescriptions: Record<UserRole, string> = {
@@ -96,6 +93,10 @@ function ProfileContent({ params }: { params: { address: string } }) {
     const [editView, setEditView] = useState<"info" | "avatar" | "cover">("info")
     const [fetchedProfile, setFetchedProfile] = useState<UserProfile | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+    const [userPrompts, setUserPrompts] = useState<any[]>([])
+    const [userReviews, setUserReviews] = useState<any[]>([])
+    const [isPromptsLoading, setIsPromptsLoading] = useState(false)
+    const [isReviewsLoading, setIsReviewsLoading] = useState(false)
 
     // Fetch public profile if viewing someone else
     useEffect(() => {
@@ -115,6 +116,10 @@ function ProfileContent({ params }: { params: { address: string } }) {
                         isAvailableForFreelance: user.is_available_for_freelance ?? true,
                         hourlyRate: user.hourly_rate ?? 0.002,
                         hourlyRateCurrency: user.hourly_rate_currency ?? "sBTC",
+                        specialization_id: user.specialization_id ?? [],
+                        specialties: user.specialties ?? [],
+                        stats: user.stats ?? { rating: 0, projects: 0, reviews: 0, sold: 0 },
+                        activities: user.activities ?? [],
                     })
                 })
                 .catch(err => {
@@ -158,6 +163,48 @@ function ProfileContent({ params }: { params: { address: string } }) {
         }
     }, [activeTab, isOwn, isConnected])
 
+    // Use own profile data if own page, else empty data (no more Yuki fallback)
+    const displayProfile = isOwn ? profile : (fetchedProfile || {
+        id: 0,
+        username: "",
+        name: "",
+        bio: "",
+        roles: [] as UserRole[],
+        activeRole: "buyer" as UserRole,
+        avatar: "",
+        avatarUrl: "",
+        coverImage: "",
+        isAvailableForFreelance: true,
+        hourlyRate: 0.002,
+        hourlyRateCurrency: "sBTC",
+        specialization_id: [],
+        specialties: [],
+        stats: { rating: 0, projects: 0, reviews: 0, sold: 0 },
+        activities: [],
+    })
+
+    // Fetch user's prompts and reviews when profile is available
+    useEffect(() => {
+        const userId = displayProfile.id
+        const userAddress = decodedAddress || (myAddress as string)
+
+        if (mounted && (userId || userAddress)) {
+            setIsPromptsLoading(true)
+            getPrompts({ user_address: userAddress })
+                .then(res => setUserPrompts(res.data))
+                .catch(err => console.error("Failed to fetch user prompts:", err))
+                .finally(() => setIsPromptsLoading(false))
+
+            if (userId) {
+                setIsReviewsLoading(true)
+                getArtistReviews(userId)
+                    .then(res => setUserReviews(res))
+                    .catch(err => console.error("Failed to fetch reviews:", err))
+                    .finally(() => setIsReviewsLoading(false))
+            }
+        }
+    }, [mounted, displayProfile.id, decodedAddress, myAddress])
+
     // Wait until hydration is complete to avoid flashing mock data
     if (!isInitialized) {
         return (
@@ -170,22 +217,6 @@ function ProfileContent({ params }: { params: { address: string } }) {
             </AppShell>
         )
     }
-
-    // Use own profile data if own page, else empty data (no more Yuki fallback)
-    const displayProfile = isOwn ? profile : (fetchedProfile || {
-        name: "",
-        bio: "",
-        roles: [] as UserRole[],
-        activeRole: "buyer" as UserRole,
-        avatar: "",
-        avatarUrl: "",
-        coverImage: "",
-        isAvailableForFreelance: true,
-        hourlyRate: 0.002,
-        hourlyRateCurrency: "sBTC",
-    })
-
-    // Determine what name to show. Priority: Profile > Truncated Address > "Unknown User"
     const displayName = isOwn
         ? (profile.name || (currentAddress ? truncateAddress(currentAddress) : "New User"))
         : (displayProfile.name || (decodedAddress ? truncateAddress(decodedAddress) : "Unknown User"))
@@ -205,12 +236,11 @@ function ProfileContent({ params }: { params: { address: string } }) {
     ]
 
     // Stats logic
-    const mockArtist = artists[0]
-    const isArtist = displayProfile.roles.includes("artist")
-    const rating = isArtist ? (isOwn ? "—" : mockArtist.rating) : "0"
-    const projects = isArtist ? (isOwn ? "0" : mockArtist.completedProjects) : "0"
-    const reviews = isArtist ? (isOwn ? "0" : mockArtist.reviews) : "0"
-    const sold = isArtist ? (isOwn ? "0" : "0") : "0"
+    const stats = displayProfile.stats || { rating: 0, projects: 0, reviews: 0, sold: 0 }
+    const rating = stats.rating === 0 ? "—" : stats.rating.toString()
+    const projects = stats.projects.toString()
+    const reviews = stats.reviews.toString()
+    const sold = stats.sold.toString()
 
     return (
         <AppShell>
@@ -314,7 +344,7 @@ function ProfileContent({ params }: { params: { address: string } }) {
                                 <>
                                     {displayProfile.roles.includes("artist") && (
                                         <Link
-                                            href={`/hire/${mockArtist.id}`}
+                                            href={`/hire/${paramAddress}`}
                                             className="px-5 py-2.5 text-sm font-bold uppercase border-2 text-white tracking-wider transition-all hover:-translate-y-0.5"
                                             style={{ borderColor: accent, boxShadow: `4px 4px 0 0 ${accent}`, background: `${accent}20` }}
                                         >
@@ -380,7 +410,7 @@ function ProfileContent({ params }: { params: { address: string } }) {
                                         <div>
                                             <p className="text-xs text-white/30 uppercase tracking-wider mb-2">Specialties</p>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {mockArtist.specialties.map((s: string) => (
+                                                {(displayProfile.specialties || ['AI Artist']).map((s: string) => (
                                                     <span key={s} className="text-[10px] font-mono px-2 py-0.5 bg-[#ff2d95]/10 border border-[#ff2d95]/25 text-[#ff2d95] uppercase">{s}</span>
                                                 ))}
                                             </div>
@@ -388,17 +418,17 @@ function ProfileContent({ params }: { params: { address: string } }) {
                                         <div>
                                             <p className="text-xs text-white/30 uppercase tracking-wider mb-2">AI Tools</p>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {mockArtist.tools.map((t: string) => (
+                                                {['Midjourney v6', 'DALL-E 3'].map((t: string) => (
                                                     <span key={t} className="text-[10px] font-mono px-2 py-0.5 bg-[#00ffff]/10 border border-[#00ffff]/25 text-[#00ffff] uppercase">{t}</span>
                                                 ))}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3 p-4 border border-[#2a2a30] bg-white/[0.02]">
-                                            <span className={`w-2 h-2 rounded-full ${mockArtist.available ? "bg-[#b4ff39]" : "bg-white/20"}`} />
-                                            <span className={`text-xs font-bold ${mockArtist.available ? "text-[#b4ff39]" : "text-white/30"}`}>
-                                                {mockArtist.available ? "Available" : "Busy"}
+                                            <span className={`w-2 h-2 rounded-full ${displayProfile.isAvailableForFreelance ? "bg-[#b4ff39]" : "bg-white/20"}`} />
+                                            <span className={`text-xs font-bold ${displayProfile.isAvailableForFreelance ? "text-[#b4ff39]" : "text-white/30"}`}>
+                                                {displayProfile.isAvailableForFreelance ? "Available" : "Busy"}
                                             </span>
-                                            <span className="ml-auto text-xs font-mono text-[#00ffff]">{mockArtist.hourlyRate} $/hr</span>
+                                            <span className="ml-auto text-xs font-mono text-[#00ffff]">{displayProfile.hourlyRate} {displayProfile.hourlyRateCurrency}/hr</span>
                                         </div>
                                     </div>
                                 )}
@@ -416,22 +446,23 @@ function ProfileContent({ params }: { params: { address: string } }) {
                                 <div>
                                     <h3 className="text-sm font-bold text-white/40 uppercase tracking-wider mb-4">Recent Activity</h3>
                                     <div className="grid sm:grid-cols-2 gap-4">
-                                        {[
-                                            { icon: "🏆", text: "Won 1st place in Neon Horizon contest", time: "2 days ago", color: "#ff2d95" },
-                                            { icon: "📦", text: "Published a new prompt: Fantasy Landscape v3", time: "5 days ago", color: "#a855f7" },
-                                            { icon: "⭐", text: "Received a 5-star review from DreamDAO", time: "1 week ago", color: "#00ffff" },
-                                            { icon: "💼", text: "Completed project for StacksBrew Coffee", time: "2 weeks ago", color: "#b4ff39" },
-                                        ].map((a, i) => (
-                                            <div key={i} className="flex items-start gap-4 p-4 border border-[#2a2a30] hover:border-white/10 bg-white/[0.01] transition-colors group">
-                                                <span className="text-xl leading-none group-hover:scale-110 transition-transform">{a.icon}</span>
-                                                <div className="flex-1">
-                                                    <p className="text-sm text-white/70 line-clamp-2">{a.text}</p>
-                                                    <p className="text-[10px] text-white/30 mt-1 flex items-center gap-1 uppercase tracking-tight font-bold">
-                                                        <Clock className="w-3 h-3" /> {a.time}
-                                                    </p>
+                                        {displayProfile.activities && displayProfile.activities.length > 0 ? (
+                                            displayProfile.activities.map((a, i) => (
+                                                <div key={i} className="flex items-start gap-4 p-4 border border-[#2a2a30] hover:border-white/10 bg-white/[0.01] transition-colors group">
+                                                    <span className="text-xl leading-none group-hover:scale-110 transition-transform">{a.icon}</span>
+                                                    <div className="flex-1">
+                                                        <p className="text-sm text-white/70 line-clamp-2">{a.text}</p>
+                                                        <p className="text-[10px] text-white/30 mt-1 flex items-center gap-1 uppercase tracking-tight font-bold">
+                                                            <Clock className="w-3 h-3" /> {a.time}
+                                                        </p>
+                                                    </div>
                                                 </div>
+                                            ))
+                                        ) : (
+                                            <div className="col-span-2 py-10 text-center border border-dashed border-[#2a2a30] text-white/20 text-xs uppercase tracking-widest font-bold">
+                                                No recent activity
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -442,17 +473,22 @@ function ProfileContent({ params }: { params: { address: string } }) {
                     {activeTab === "portfolio" && (
                         <div>
                             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                                {/* Artist's own portfolio items + extra mocks */}
-                                {[...(mockArtist.portfolio || []), ...(mockArtist.portfolio || [])].map((item: any, i: number) => (
-                                    <div key={i} className="group border border-[#2a2a30] hover:border-[#ff2d95] transition-all overflow-hidden bg-[#0d0d0d]">
-                                        <div className="relative h-52 overflow-hidden">
-                                            <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                                            <span className="absolute bottom-3 left-3 text-[10px] font-mono px-2 py-0.5 bg-[#ff2d95]/20 border border-[#ff2d95]/40 text-[#ff2d95] uppercase">{item.category}</span>
+                                {userPrompts.length > 0 ? (
+                                    userPrompts.map((p: any, i: number) => (
+                                        <div key={i} className="group border border-[#2a2a30] hover:border-[#ff2d95] transition-all overflow-hidden bg-[#0d0d0d]">
+                                            <div className="relative h-52 overflow-hidden">
+                                                <img src={p.preview_image_url || "/example/prompt-example-1.png"} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                                                <span className="absolute bottom-3 left-3 text-[10px] font-mono px-2 py-0.5 bg-[#ff2d95]/20 border border-[#ff2d95]/40 text-[#ff2d95] uppercase">{p.category}</span>
+                                            </div>
+                                            <p className="p-3 text-sm font-bold text-white uppercase">{p.title}</p>
                                         </div>
-                                        <p className="p-3 text-sm font-bold text-white uppercase">{item.title}</p>
+                                    ))
+                                ) : (
+                                    <div className="col-span-full py-20 text-center border border-dashed border-[#2a2a30] text-white/20 uppercase tracking-widest font-bold text-xs">
+                                        No portfolio items yet
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </div>
                     )}
@@ -460,17 +496,17 @@ function ProfileContent({ params }: { params: { address: string } }) {
                     {/* PROMPTS */}
                     {activeTab === "prompts" && (
                         <div>
-                            {isOwn && prompts.slice(0, 4).length > 0 ? (
+                            {userPrompts.length > 0 ? (
                                 <div className="grid sm:grid-cols-2 gap-4">
-                                    {prompts.slice(0, 4).map(p => (
+                                    {userPrompts.map(p => (
                                         <Link key={p.id} href={`/marketplace`} className="group flex gap-3 p-4 bg-[#0d0d0d] border border-[#2a2a30] hover:border-[#a855f7] transition-all">
                                             <div className="w-16 h-14 shrink-0 overflow-hidden border border-[#2a2a30]">
-                                                <img src={p.creatorAvatar || "/example/prompt-example-1.png"} alt={p.title} className="w-full h-full object-cover" />
+                                                <img src={p.preview_image_url || "/example/prompt-example-1.png"} alt={p.title} className="w-full h-full object-cover" />
                                             </div>
                                             <div>
                                                 <p className="text-sm font-bold text-white uppercase group-hover:text-[#a855f7] transition-colors line-clamp-1">{p.title}</p>
                                                 <p className="text-xs text-white/40 mt-0.5 line-clamp-1">{p.category}</p>
-                                                <p className="text-xs font-mono font-bold text-[#00ffff] mt-1">{p.price} {p.currency}</p>
+                                                <p className="text-xs font-mono font-bold text-[#00ffff] mt-1">{p.price_sbtc || p.price_stx || '0'} {p.currency}</p>
                                             </div>
                                         </Link>
                                     ))}
@@ -522,53 +558,37 @@ function ProfileContent({ params }: { params: { address: string } }) {
                         </div>
                     )}
                     {activeTab === "contests" && (
-                        <div className="flex flex-col gap-4">
-                            {contests.slice(0, 3).map(c => (
-                                <Link key={c.id} href={`/contests/${c.id}`} className="group flex gap-4 bg-[#0d0d0d] border border-[#2a2a30] hover:border-[#00ffff] transition-all p-4">
-                                    <div className="w-20 h-16 overflow-hidden shrink-0">
-                                        <img src={c.image} alt={c.title} className="w-full h-full object-cover" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-xs font-mono text-[#a78bfa] mb-1">{c.category}</p>
-                                        <p className="font-extrabold text-white uppercase text-sm group-hover:text-[#00ffff] transition-colors">{c.title}</p>
-                                        <div className="flex items-center gap-3 mt-1.5 text-xs text-white/40">
-                                            <span className="flex items-center gap-1"><Trophy className="w-3 h-3 text-[#ff2d95]" /> {c.prizePool} {c.currency}</span>
-                                            <span>{c.submissionCount} submissions</span>
-                                        </div>
-                                    </div>
-                                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 border self-start" style={{
-                                        color: c.status === "active" ? "#b4ff39" : c.status === "judging" ? "#00ffff" : "#ffffff40",
-                                        borderColor: `${c.status === "active" ? "#b4ff39" : c.status === "judging" ? "#00ffff" : "#ffffff"}30`,
-                                    }}>{c.status}</span>
-                                </Link>
-                            ))}
+                        <div className="py-20 text-center border border-dashed border-[#2a2a30] text-white/20 uppercase tracking-widest font-bold text-xs">
+                            <Trophy className="w-8 h-8 mx-auto mb-3 opacity-40" />
+                            Contest data coming soon
                         </div>
                     )}
 
                     {/* REVIEWS */}
                     {activeTab === "reviews" && (
                         <div className="flex flex-col gap-4 max-w-2xl">
-                            {[
-                                { name: "CryptoProject DAO", text: "Absolutely incredible work. Delivered beyond our expectations, on time and with great communication. The visuals were exactly what we envisioned for our campaign.", rating: 5, date: "Mar 2026" },
-                                { name: "PixelVault Studio", text: "Understood our vision immediately. The visuals are stunning and perfectly on-brand. Will definitely work together again.", rating: 5, date: "Feb 2026" },
-                                { name: "MetaFashion Inc.", text: "Professional, fast, and creative. Highly recommended for any AI art project.", rating: 4, date: "Feb 2026" },
-                                { name: "NeonX Labs", text: "Great to work with. Delivered on time and was very responsive throughout the project.", rating: 5, date: "Jan 2026" },
-                            ].map((r, i) => (
-                                <div key={i} className="p-5 bg-[#0d0d0d] border border-[#2a2a30]">
-                                    <div className="flex items-start justify-between gap-3 mb-3">
-                                        <div>
-                                            <p className="font-bold text-white text-sm">{r.name}</p>
-                                            <p className="text-[11px] text-white/30">{r.date}</p>
+                            {userReviews.length > 0 ? (
+                                userReviews.map((r, i) => (
+                                    <div key={i} className="p-5 bg-[#0d0d0d] border border-[#2a2a30]">
+                                        <div className="flex items-start justify-between gap-3 mb-3">
+                                            <div>
+                                                <p className="font-bold text-white text-sm">{r.reviewer?.name || r.reviewer?.stx_address || "Client"}</p>
+                                                <p className="text-[11px] text-white/30">{new Date(r.created_at).toLocaleDateString()}</p>
+                                            </div>
+                                            <div className="flex gap-0.5">
+                                                {Array.from({ length: 5 }).map((_, j) => (
+                                                    <Star key={j} className={`w-3.5 h-3.5 ${j < r.rating ? "fill-[#ff2d95] text-[#ff2d95]" : "fill-transparent text-white/20"}`} />
+                                                ))}
+                                            </div>
                                         </div>
-                                        <div className="flex gap-0.5">
-                                            {Array.from({ length: 5 }).map((_, j) => (
-                                                <Star key={j} className={`w-3.5 h-3.5 ${j < r.rating ? "fill-[#ff2d95] text-[#ff2d95]" : "fill-transparent text-white/20"}`} />
-                                            ))}
-                                        </div>
+                                        <p className="text-sm text-white/60 leading-relaxed">{r.comment}</p>
                                     </div>
-                                    <p className="text-sm text-white/60 leading-relaxed">{r.text}</p>
+                                ))
+                            ) : (
+                                <div className="py-20 text-center border border-dashed border-[#2a2a30] text-white/20 uppercase tracking-widest font-bold text-xs">
+                                    No reviews yet
                                 </div>
-                            ))}
+                            )}
                         </div>
                     )}
                 </div>
