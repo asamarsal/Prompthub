@@ -4,9 +4,6 @@ import { useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
-import { openContractCall } from "@stacks/connect"
-import { uintCV, PostConditionMode } from "@stacks/transactions"
-import { STACKS_TESTNET } from "@stacks/network"
 import { useWallet } from "@/lib/wallet-context"
 import { getApiToken } from "@/lib/api"
 
@@ -45,6 +42,10 @@ export default function CreateContestPage() {
         setIsSubmitting(true)
 
         try {
+            const { openContractCall } = await import("@stacks/connect")
+            const { uintCV, PostConditionMode } = await import("@stacks/transactions")
+            const { STACKS_TESTNET } = await import("@stacks/network")
+
             const totalAmount = prizes.reduce((acc, p) => acc + (Number(p.amount) || 0), 0)
             const totalPoolUstx = Math.floor(totalAmount * 1000000)
 
