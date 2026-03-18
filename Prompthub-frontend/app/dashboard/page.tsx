@@ -237,8 +237,12 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-3">
               {myPrompts.map((prompt) => (
                 <div key={prompt.id} className="flex items-center gap-3 p-3 hover:bg-[rgba(180,120,255,0.06)] transition-colors">
-                  <div className="w-10 h-10 bg-[rgba(180,120,255,0.1)] border border-white/5 flex items-center justify-center shrink-0">
-                    <FileText className="w-5 h-5 text-[#a78bfa]" />
+                  <div className="w-10 h-10 bg-[rgba(180,120,255,0.1)] border border-white/5 flex items-center justify-center shrink-0 overflow-hidden">
+                    {prompt.image ? (
+                      <img src={prompt.image} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <FileText className="w-5 h-5 text-[#a78bfa]" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-[#e0d4ff] truncate">{prompt.title}</p>

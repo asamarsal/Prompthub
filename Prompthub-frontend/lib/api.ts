@@ -9,6 +9,33 @@ import { wrapAxiosWithPayment } from "x402-stacks"
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 const TOKEN_KEY = "prompthub_api_token"
+const COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price?ids=blockstack&vs_currencies=usd"
+
+/**
+ * Fetches the current STX price in USD from CoinGecko.
+ * Returns a fallback of 2.5 if the request fails.
+ */
+export async function fetchStacksPrice(): Promise<number> {
+    try {
+        const apiKey = process.env.NEXT_PUBLIC_COINGECKO_API_KEY
+        const url = apiKey
+            ? `${COINGECKO_URL}&x_cg_pro_api_key=${apiKey}`
+            : COINGECKO_URL
+
+        const res = await fetch(url)
+        const data = await res.json()
+
+        if (data && data.blockstack && typeof data.blockstack.usd === 'number') {
+            return data.blockstack.usd
+        }
+
+        console.warn("CoinGecko response missing blockstack.usd, using fallback.")
+        return 2.5
+    } catch (err) {
+        console.error("Failed to fetch STX price:", err)
+        return 2.5 // Fallback
+    }
+}
 
 // Standard Axios instance for x402 protected routes
 const x402Api = axios.create({
@@ -21,7 +48,7 @@ const x402Api = axios.create({
 // Add Auth Token to Axios
 x402Api.interceptors.request.use((config) => {
     const token = getApiToken()
-    if (token) {
+    if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`
     }
     return config
@@ -32,7 +59,21 @@ x402Api.interceptors.request.use((config) => {
  * @param account The Stacks Account object (must have address and signTransaction)
  */
 export function getX402Client(account: any) {
-    return wrapAxiosWithPayment(x402Api, account as any)
+    // Create a fresh instance to avoid duplicate wrapping or interceptor conflicts
+    const api = axios.create({
+        baseURL: BASE_URL,
+        headers: {
+            Accept: "application/json",
+        },
+    })
+
+    // Add auth token
+    const token = getApiToken()
+    if (token) {
+        api.defaults.headers.common.Authorization = `Bearer ${token}`
+    }
+
+    return wrapAxiosWithPayment(api, account as any)
 }
 
 export function getApiToken(): string | null {

@@ -6,7 +6,8 @@ import { artists } from "@/lib/mock-artists"
 import { contests } from "@/lib/mock-contests"
 import { prompts } from "@/lib/mock-data"
 import Link from "next/link"
-import { use, useState, useEffect } from "react"
+import { use, useState, useEffect, Suspense } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Star, BadgeCheck, Trophy, ShoppingBag, Copy, Check, Palette, User, Award, Clock, TrendingUp, Heart } from "lucide-react"
 import { RoleOnboardingModal } from "@/components/role-onboarding-modal"
 import { EditProfileModal } from "@/components/edit-profile-modal"
@@ -39,10 +40,10 @@ function CopyBtn({ text }: { text: string }) {
     )
 }
 
-type Tab = "overview" | "portfolio" | "prompts" | "reviews" | "contests" | "saved"
+type Tab = "overview" | "portfolio" | "prompts" | "reviews" | "contests" | "collections"
 
-export default function ProfilePage({ params }: { params: Promise<{ address: string }> }) {
-    const { address: paramAddress } = use(params)
+function ProfileContent({ params }: { params: { address: string } }) {
+    const { address: paramAddress } = params
     const { address: myAddress, isConnected, profile } = useWallet()
 
     const [mounted, setMounted] = useState(false)
@@ -81,6 +82,16 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
     const [activeTab, setActiveTab] = useState<Tab>("overview")
     const [savedPrompts, setSavedPrompts] = useState<any[]>([])
     const [savedLoading, setSavedLoading] = useState(false)
+
+    // Handle tab from URL
+    const searchParams = useSearchParams()
+    const tabParam = searchParams.get("tab")
+
+    useEffect(() => {
+        if (tabParam && ["overview", "portfolio", "prompts", "reviews", "contests", "collections"].includes(tabParam)) {
+            setActiveTab(tabParam as Tab)
+        }
+    }, [tabParam])
     const [showEditProfile, setShowEditProfile] = useState(false)
     const [editView, setEditView] = useState<"info" | "avatar" | "cover">("info")
     const [fetchedProfile, setFetchedProfile] = useState<UserProfile | null>(null)
@@ -93,6 +104,7 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
             fetchUserByAddress(decodedAddress)
                 .then(user => {
                     setFetchedProfile({
+                        username: user.username ?? "",
                         name: user.name ?? "",
                         bio: user.bio ?? "",
                         avatar: "",
@@ -110,9 +122,9 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
         }
     }, [mounted, isOwn, decodedAddress])
 
-    // Fetch bookmarks when entering "saved" tab
+    // Fetch bookmarks when entering "collections" tab
     useEffect(() => {
-        if (activeTab === "saved" && isOwn && isConnected) {
+        if (activeTab === "collections" && isOwn && isConnected) {
             setSavedLoading(true)
             fetchBookmarks()
                 .then(data => {
@@ -162,7 +174,7 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
         { id: "overview", label: "Overview" },
         ...(displayProfile.roles.includes("artist") ? [{ id: "portfolio" as Tab, label: "Portfolio" }] : []),
         { id: "prompts", label: "Prompts" },
-        ...(isOwn ? [{ id: "saved" as Tab, label: "Saved" }] : []),
+        ...(isOwn ? [{ id: "collections" as Tab, label: "Collections" }] : []),
         ...(displayProfile.roles.includes("brand") ? [{ id: "contests" as Tab, label: "Contests" }] : []),
         { id: "reviews", label: "Reviews" },
     ]
@@ -452,8 +464,8 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
                         </div>
                     )}
 
-                    {/* SAVED (Wishlist) */}
-                    {activeTab === "saved" && (
+                    {/* COLLECTIONS (Wishlist) */}
+                    {activeTab === "collections" && (
                         <div>
                             {savedLoading ? (
                                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
@@ -562,5 +574,22 @@ export default function ProfilePage({ params }: { params: Promise<{ address: str
             />
             <RoleOnboardingModal open={false} onClose={() => { }} />
         </AppShell>
+    )
+}
+
+export default function ProfilePage({ params }: { params: Promise<{ address: string }> }) {
+    const resolvedParams = use(params)
+    return (
+        <Suspense fallback={
+            <AppShell>
+                <div className="w-full h-screen flex items-center justify-center">
+                    <div className="text-white/40 uppercase tracking-widest text-sm font-bold animate-pulse">
+                        Loading Profile...
+                    </div>
+                </div>
+            </AppShell>
+        }>
+            <ProfileContent params={resolvedParams} />
+        </Suspense>
     )
 }

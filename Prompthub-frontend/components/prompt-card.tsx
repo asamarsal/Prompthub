@@ -8,6 +8,7 @@ import { toggleBookmark } from "@/lib/api"
 import type { Prompt } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { useStacksPrice } from "@/lib/hooks/use-stacks-price"
 
 const categoryIcons: Record<string, string> = {
   "Image Generation": "IMG",
@@ -21,6 +22,7 @@ export function PromptCard({ prompt }: { prompt: Prompt }) {
   const router = useRouter()
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [loading, setLoading] = useState(false)
+  const { price: stxPrice } = useStacksPrice()
 
   // Use primary color for image generation to match the screenshot, and secondary/accent for others
   const isImageCategory = prompt.category === "Image Generation" || prompt.category === "UI/UX Design"
@@ -76,13 +78,34 @@ export function PromptCard({ prompt }: { prompt: Prompt }) {
         </button>
 
         {/* Preview area with stark watermark */}
-        <div className="relative h-[200px] bg-gradient-to-br from-[#1a1c23] to-[#161218] flex items-center justify-center border-b border-[#2a2a30] overflow-hidden group-hover:border-[#00ffff]/30 transition-colors">
+        <div className="relative h-[200px] bg-[#0a001a] flex items-center justify-center border-b border-[#2a2a30] overflow-hidden group-hover:border-[#00ffff]/30 transition-colors">
+          {/* Background Image */}
+          {prompt.image ? (
+            <img
+              src={prompt.image}
+              alt={prompt.title}
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (!target.src.includes('unsplash')) {
+                  target.src = 'https://images.unsplash.com/photo-1614729939124-032f0b5609ce?w=800&q=80';
+                }
+              }}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1c23] to-[#161218]" />
+          )}
+
           {/* Brutalist Watermark matching screenshot exact angle and text */}
+          <div className="absolute inset-0 flex items-center justify-center -rotate-[12deg] pointer-events-none opacity-10 z-10 select-none">
+            <span className="text-[4rem] font-display font-black tracking-tighter uppercase leading-none text-white whitespace-nowrap">
+              PREVIEW
+            </span>
+          </div>
+
           {prompt.isCurated && (
-            <div className="absolute inset-x-[-20%] inset-y-0 flex items-center justify-center -rotate-[12deg] pointer-events-none opacity-20">
-              <span className="text-[2.8rem] md:text-[3.5rem] font-display font-black tracking-[-0.04em] uppercase leading-[0.85] text-white">
-                VERIFIED<br />ORIGINAL
-              </span>
+            <div className="absolute top-4 left-4 z-10 px-2 py-1 bg-[#b4ff39] text-black text-[10px] font-black uppercase tracking-widest leading-none">
+              VERIFIED
             </div>
           )}
         </div>
@@ -147,6 +170,9 @@ export function PromptCard({ prompt }: { prompt: Prompt }) {
                   </span>
                   <span className="text-sm font-display font-bold text-[#ff2d95]">sBTC</span>
                 </div>
+                <span className="text-[10px] font-mono text-muted-foreground ml-2">
+                  ~${(prompt.price * stxPrice).toFixed(2)} USD
+                </span>
               </div>
             </div>
 

@@ -19,6 +19,7 @@ export interface Prompt {
   description: string
   isNsfw: boolean
   isCurated: boolean
+  image?: string
 }
 
 export const prompts: Prompt[] = [

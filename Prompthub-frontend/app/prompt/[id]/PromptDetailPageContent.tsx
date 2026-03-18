@@ -7,8 +7,9 @@ import { PromptCard } from "@/components/prompt-card"
 import { PurchaseModal } from "@/components/purchase-modal"
 import { prompts as mockPrompts } from "@/lib/mock-data"
 import { ChevronRight, Check, Copy, Heart, Share2, Star, ExternalLink, Zap, Lock, BadgeCheck, Clock, Unlock, Loader2 } from "lucide-react"
-import { toggleBookmark, fetchPremiumContent, getPrompt } from "@/lib/api"
+import { getPrompt, toggleBookmark, getReviews, fetchPremiumContent } from "@/lib/api"
 import { useWallet } from "@/lib/wallet-context"
+import { useStacksPrice } from "@/lib/hooks/use-stacks-price"
 import { openSTXTransfer } from "@stacks/connect"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -36,6 +37,8 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
     const [purchaseOpen, setPurchaseOpen] = useState(false)
     const [activeTab, setActiveTab] = useState<"description" | "reviews" | "history" | any>("description")
     const [isBookmarked, setIsBookmarked] = useState(false)
+    const [reviews, setReviews] = useState<any[]>([])
+    const { price: stxPrice } = useStacksPrice()
     const [bookmarkLoading, setBookmarkLoading] = useState(false)
 
     const [premiumContent, setPremiumContent] = useState<string | null>(null)
@@ -67,6 +70,9 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                     createdAt: new Date(res.created_at).toISOString().split('T')[0],
                     isCurated: res.is_curated,
                     contract_id: res.contract_id,
+                    image: res.preview_image_url,
+                    txId: res.stacks_tx_id,
+                    cid: res.cid_ipfs,
                 })
             } catch (err) {
                 console.error("Failed to fetch prompt", err)
@@ -198,9 +204,26 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                     {/* Left: Preview */}
                     <div className="lg:col-span-3">
-                        <div className="relative aspect-[16/10] rounded-2xl overflow-hidden glass-iridescent">
+                        <div className="relative aspect-[16/10] rounded-2xl overflow-hidden glass-iridescent bg-[#0a001a]">
+                            {prompt.image && (
+                                <img
+                                    src={prompt.image}
+                                    alt={prompt.title}
+                                    className="absolute inset-0 w-full h-full object-cover opacity-80"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).style.opacity = '0';
+                                    }}
+                                />
+                            )}
+                            {/* Diagonal Watermark */}
+                            <div className="absolute inset-0 flex items-center justify-center -rotate-[15deg] pointer-events-none opacity-10 z-10 select-none">
+                                <span className="text-[6rem] md:text-[8rem] font-display font-black tracking-tighter uppercase leading-none text-white whitespace-nowrap">
+                                    PREVIEW
+                                </span>
+                            </div>
+
                             <div className="absolute inset-0 bg-gradient-to-br from-[#ff2d95]/15 via-[#a855f7]/10 to-[#00ffff]/15 flex items-center justify-center">
-                                <div className="text-center">
+                                <div className="text-center relative z-10">
                                     <Lock className="w-12 h-12 text-[#a78bfa] mx-auto mb-3" />
                                     <p className="text-sm text-[#a78bfa] font-bold">Preview - Purchase to unlock</p>
                                 </div>
@@ -210,10 +233,10 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                             <div className="absolute inset-0 flex items-center justify-center opacity-5" aria-hidden="true">
                                 <p className="text-6xl font-extrabold text-white rotate-[-20deg] select-none">PromptHub</p>
                             </div>
-                            <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 border-[#ff2d95]/30 rounded-tl" />
-                            <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 border-[#00ffff]/30 rounded-tr" />
-                            <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 border-[#b4ff39]/30 rounded-bl" />
-                            <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 border-[#a855f7]/30 rounded-br" />
+                            <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 border-[#ff2d95]/30 rounded-tl z-20" />
+                            <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 border-[#00ffff]/30 rounded-tr z-20" />
+                            <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 border-[#b4ff39]/30 rounded-bl z-20" />
+                            <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 border-[#a855f7]/30 rounded-br z-20" />
                         </div>
 
                         <div className="mt-8">
@@ -398,10 +421,25 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                             <div className="bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] p-6">
                                 <div className="mb-6">
                                     <p className="text-xs text-[#a78bfa] mb-1 font-mono uppercase">Current Price</p>
-                                    <p className="text-4xl font-extrabold text-[#00ffff]">{prompt.price} STX</p>
-                                    <p className="text-sm text-[#a78bfa]/50">~${(prompt.price * 2.5).toFixed(2)} USD</p>
+                                    <div className="flex items-baseline">
+                                        <p className="text-4xl font-extrabold text-[#00ffff]">{prompt.price}</p>
+                                        <span className="text-xl font-display font-bold text-white uppercase ml-2">{prompt.currency || "STX"}</span>
+                                    </div>
                                 </div>
-
+                                <div className="flex items-center gap-3">
+                                    <p className="text-[#a78bfa] font-mono text-sm leading-none mt-1">
+                                        ~${(prompt.price * stxPrice).toFixed(2)} USD
+                                    </p>
+                                    <a
+                                        href="https://coinmarketcap.com/id/currencies/stacks/"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[10px] font-display font-black text-[#00ffff] hover:underline uppercase tracking-widest flex items-center gap-1"
+                                    >
+                                        See Price
+                                        <ExternalLink className="w-2.5 h-2.5" />
+                                    </a>
+                                </div>
                                 <div className="flex flex-col gap-2 mb-6 text-sm">
                                     <div className="flex justify-between">
                                         <span className="text-[#a78bfa]">License</span>
@@ -428,6 +466,37 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                                     <Heart className={cn("w-4 h-4", isBookmarked && "fill-[#ff2d95] text-[#ff2d95]")} />
                                     {isBookmarked ? "Saved" : "Save"}
                                 </button>
+
+                                <div className="mt-6 pt-6 border-t border-[#2a2a30] flex flex-col gap-3">
+                                    {prompt.txId && (
+                                        <a
+                                            href={`https://explorer.hiro.so/txid/${prompt.txId}?chain=testnet`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center justify-between text-[10px] font-bold text-[#a78bfa] hover:text-[#00ffff] uppercase tracking-widest transition-colors group"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <ExternalLink className="w-3 h-3" />
+                                                Stacks Explorer
+                                            </span>
+                                            <ChevronRight className="w-3 h-3 opacity-30 group-hover:opacity-100" />
+                                        </a>
+                                    )}
+                                    {prompt.cid && (
+                                        <a
+                                            href={`https://gateway.pinata.cloud/ipfs/${prompt.cid.replace('ipfs://', '')}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center justify-between text-[10px] font-bold text-[#a78bfa] hover:text-[#ff2d95] uppercase tracking-widest transition-colors group"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <ExternalLink className="w-3 h-3" />
+                                                Pinata IPFS
+                                            </span>
+                                            <ChevronRight className="w-3 h-3 opacity-30 group-hover:opacity-100" />
+                                        </a>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>

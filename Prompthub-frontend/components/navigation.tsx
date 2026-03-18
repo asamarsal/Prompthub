@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Menu, X, Search, LayoutDashboard, Plus, Wallet, Copy, Check, Palette, Trophy, User, Settings, ChevronDown, Bell, MessageSquare } from "lucide-react"
+import { Menu, X, Search, LayoutDashboard, Plus, Wallet, Copy, Check, Palette, Trophy, User, Settings, ChevronDown, Bell, MessageSquare, Heart } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useWallet, truncateAddress, ROLE_LABELS, ROLE_ICONS, type UserRole } from "@/lib/wallet-context"
 import { RoleOnboardingModal } from "@/components/role-onboarding-modal"
@@ -204,6 +204,16 @@ export function Navigation() {
                       >
                         <User className="w-4 h-4" /> View My Profile
                       </Link>
+                      <Link
+                        href={mounted && address ? `/profile/${address}?tab=collections` : "#"}
+                        onClick={(e) => {
+                          if (!mounted || !address) e.preventDefault()
+                          setShowDropdown(false)
+                        }}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                      >
+                        <Heart className="w-4 h-4 text-[#ff2d95]" /> Saved Collections
+                      </Link>
                       <button
                         onClick={() => { setShowOnboarding(true); setShowDropdown(false) }}
                         className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors text-left"
@@ -275,6 +285,13 @@ export function Navigation() {
                   <span className="text-xs font-display text-[#00ffff] font-extrabold">{balance.toFixed(4)} sBTC</span>
                   <span className="text-xs font-mono text-muted-foreground">{truncateAddress(address!)}</span>
                   <button onClick={() => { setMobileOpen(false); setShowOnboarding(true) }} className="text-xs text-[#a855f7] hover:text-white text-left py-1 mt-1 transition-colors">⚙ Edit Profile</button>
+                  <Link
+                    href={mounted && address ? `/profile/${address}?tab=collections` : "#"}
+                    onClick={() => setMobileOpen(false)}
+                    className="text-xs text-white/60 hover:text-white text-left py-1 transition-colors flex items-center gap-2"
+                  >
+                    <Heart className="w-3 h-3 text-[#ff2d95]" /> My Collections
+                  </Link>
                   <button onClick={() => { disconnect(); setMobileOpen(false) }} className="text-xs font-bold text-[#ff2d95] text-left py-1 uppercase tracking-widest transition-colors">Disconnect</button>
                 </div>
               ) : (

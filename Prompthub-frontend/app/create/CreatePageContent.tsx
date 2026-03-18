@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { AppShell } from "@/components/app-shell"
-import { Upload, Check, ChevronRight, ChevronLeft, FileText, Lightbulb, X, Loader2 } from "lucide-react"
+import { Upload, Check, ChevronRight, ChevronLeft, FileText, Lightbulb, X, Loader2, ExternalLink } from "lucide-react"
 import { categories as allCategories, models as allModels } from "@/lib/mock-data"
 import { createPrompt, uploadFile, uploadMetadata, uploadPromptAsset } from "@/lib/api"
 import { useWallet } from "@/lib/wallet-context"
@@ -13,6 +13,8 @@ import {
   PostConditionMode
 } from "@stacks/transactions"
 import { STACKS_TESTNET } from "@stacks/network"
+import { useStacksPrice } from "@/lib/hooks/use-stacks-price"
+import { ExternalLink as LucideExternalLink } from "lucide-react" // Rename because ExternalLink is already imported? No, let's check imports.
 
 const steps = ["Basic Info", "Pricing & License", "Upload Content", "Preview & Confirm"]
 
@@ -68,7 +70,10 @@ export default function CreatePageContent() {
   const [tagInput, setTagInput] = useState("")
   const [deploying, setDeploying] = useState(false)
   const [deployed, setDeployed] = useState(false)
+  const [deployedTxId, setDeployedTxId] = useState<string | null>(null)
+  const [deployedMetadataCID, setDeployedMetadataCID] = useState<string | null>(null)
   const [isVerified, setIsVerified] = useState(true) // Mock state to demonstrate different roles
+  const { price: stxPrice } = useStacksPrice()
   const [form, setForm] = useState<FormData>({
     title: "",
     description: "",
@@ -195,6 +200,8 @@ export default function CreatePageContent() {
             currency: form.currency,
             additional_info: form.additionalLinks.filter(l => l.url.trim() !== "")
           })
+          setDeployedTxId(data.txId)
+          setDeployedMetadataCID(metadataCID)
           setDeployed(true)
         },
         onCancel: () => {
@@ -212,6 +219,9 @@ export default function CreatePageContent() {
 
   const feePercentage = isVerified ? 0.025 : 0.10
   const platformFee = Number(form.price) * feePercentage
+  const platformFeeUsd = platformFee * stxPrice
+  const totalEarningsStx = Number(form.price) - platformFee
+  const totalEarningsUsd = totalEarningsStx * stxPrice
 
   const canProceed = [
     form.title.length > 0 &&
@@ -242,9 +252,36 @@ export default function CreatePageContent() {
                 </div>
                 <h2 className="text-2xl font-extrabold gradient-text-holographic mb-2">Prompt Deployed!</h2>
                 <p className="text-[#a78bfa] mb-6">Your prompt is now live on the marketplace.</p>
-                <a href="/marketplace" className="btn-gradient px-6 py-3 rounded-xl text-sm font-extrabold text-white inline-block">
-                  View in Marketplace
-                </a>
+
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <a href="/marketplace" className="btn-gradient px-6 py-3 rounded-xl text-sm font-extrabold text-white">
+                    View in Marketplace
+                  </a>
+
+                  {deployedTxId && (
+                    <a
+                      href={`https://explorer.hiro.so/txid/${deployedTxId}?chain=testnet`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-6 py-3 border-2 border-[#2a2a30] bg-[#16161a] hover:border-[#00ffff] rounded-xl text-xs font-bold text-[#a78bfa] hover:text-[#00ffff] transition-all"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Stacks Explorer
+                    </a>
+                  )}
+
+                  {deployedMetadataCID && (
+                    <a
+                      href={`https://gateway.pinata.cloud/ipfs/${deployedMetadataCID.replace('ipfs://', '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-6 py-3 border-2 border-[#2a2a30] bg-[#16161a] hover:border-[#ff2d95] rounded-xl text-xs font-bold text-[#a78bfa] hover:text-[#ff2d95] transition-all"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Pinata IPFS
+                    </a>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="bg-[#16161a]/60 backdrop-blur-xl border-2 border-[#2a2a30] p-6 md:p-8">
@@ -684,9 +721,12 @@ export default function CreatePageContent() {
                     <div className="bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] p-5">
                       <h3 className="text-sm font-bold text-[#e0d4ff] mb-3">Fee Breakdown</h3>
                       <div className="flex flex-col gap-2 text-sm">
-                        <div className="flex justify-between">
+                        <div className="flex justify-between items-center">
                           <span className="text-[#a78bfa]">Listing Price</span>
-                          <span className="text-[#e0d4ff] font-mono">{form.price} {form.currency}</span>
+                          <div className="text-right flex flex-col items-end">
+                            <span className="text-[#e0d4ff] font-mono leading-none">{form.price} {form.currency}</span>
+                            <span className="text-[10px] text-[#a78bfa]/50 font-mono mt-1">~${(Number(form.price) * stxPrice).toFixed(2)} USD</span>
+                          </div>
                         </div>
                         <div className="flex justify-between items-center mt-1">
                           <span className="text-[#a78bfa] flex items-center gap-2">
@@ -694,7 +734,10 @@ export default function CreatePageContent() {
                             {isVerified && <span className="bg-[#b4ff39]/20 text-[#b4ff39] px-2 py-0.5 text-[10px] font-bold uppercase border border-[#b4ff39]/50">Verified Rate</span>}
                             {!isVerified && <span className="bg-[#a78bfa]/20 text-[#a78bfa] px-2 py-0.5 text-[10px] font-bold uppercase border border-[#a78bfa]/50">Standard Rate</span>}
                           </span>
-                          <span className="text-[#e0d4ff] font-mono">-{platformFee.toFixed(6)} {form.currency}</span>
+                          <div className="text-right flex flex-col items-end">
+                            <span className="text-[#e0d4ff] font-mono leading-none">-{platformFee.toFixed(6)} {form.currency}</span>
+                            <span className="text-[10px] text-[#ff2d95]/50 font-mono mt-1">~${platformFeeUsd.toFixed(2)} USD</span>
+                          </div>
                         </div>
                         <div className="border-t border-[rgba(180,120,255,0.1)] pt-3 mt-1 flex justify-between items-end">
                           <div className="flex flex-col">
@@ -705,7 +748,10 @@ export default function CreatePageContent() {
                               Toggle Role (Dev)
                             </button>
                           </div>
-                          <span className="font-extrabold text-[#b4ff39] text-lg">{(Number(form.price) - platformFee).toFixed(6)} {form.currency}</span>
+                          <div className="text-right flex flex-col items-end">
+                            <span className="font-extrabold text-[#b4ff39] text-lg leading-none">{(Number(form.price) - platformFee).toFixed(6)} {form.currency}</span>
+                            <span className="text-xs text-[#b4ff39]/50 font-mono mt-1">~${totalEarningsUsd.toFixed(2)} USD</span>
+                          </div>
                         </div>
                       </div>
                     </div>
