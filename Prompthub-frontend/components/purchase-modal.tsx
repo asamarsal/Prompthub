@@ -38,9 +38,6 @@ export function PurchaseModal({
   const royaltyFee = prompt.price * (prompt.royalty / 100)
   const total = prompt.price + platformFee + royaltyFee
 
-  // Convert sBTC (or STX) to micro-STX for standard devnet/testnet transfers
-  const amountToMicroStx = Math.floor(total * 1000000)
-
   const handleConfirm = async () => {
     if (!isConnected || !address) {
       alert("Please connect your wallet first.")

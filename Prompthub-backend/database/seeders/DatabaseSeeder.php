@@ -20,19 +20,21 @@ class DatabaseSeeder extends Seeder
 
         User::updateOrCreate(
             ['email' => 'test@example.com'],
-            ['name' => 'Test User']
+            ['name' => 'Test User', 'stx_address' => 'SP_SEEDER_BRAND', 'roles' => ['brand', 'artist']]
         );
 
         Schema::disableForeignKeyConstraints();
         \App\Models\Prompt::truncate();
         \App\Models\AiModel::truncate();
         \App\Models\Category::truncate();
+        \App\Models\Contest::truncate();
         Schema::enableForeignKeyConstraints();
 
         $this->call([
             CategorySeeder::class,
             AiModelSeeder::class,
             PromptSeeder::class,
+            ContestSeeder::class,
         ]);
     }
 }

@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Trophy, Clock, Users, Plus, Star } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
-import { contests } from "@/lib/mock-contests"
+import { getApiToken } from "@/lib/api"
 
 const categoryFilters = ["All", "Brand Visual Identity", "Product Launch Campaign", "NFT Collection Design", "Social Media Challenge", "Character Design", "Packaging Design"]
 const statusFilters = ["All", "active", "judging", "ended"]
@@ -23,6 +23,44 @@ const statusColors: Record<string, string> = {
 export default function ContestsPage() {
     const [category, setCategory] = useState("All")
     const [status, setStatus] = useState("All")
+    const [contests, setContests] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        async function fetchContests() {
+            try {
+                const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+                const res = await fetch(`${url}/api/contests`, {
+                    headers: { 'Accept': 'application/json' }
+                })
+                const data = await res.json()
+
+                // Map backend format to UI format
+                const mapped = data.map((c: any, index: number) => ({
+                    id: c.id,
+                    title: c.title,
+                    brand: c.brand_name || "Unknown Brand",
+                    description: c.about_brand || "",
+                    prizePool: parseFloat(c.total_prize_sbtc || 0).toString(),
+                    currency: "sBTC",
+                    category: c.category || "Uncategorized",
+                    deadline: c.deadline,
+                    submissionCount: c.submissions_count || 0,
+                    status: c.status === "OPEN" ? "active" : c.status === "COMPLETED" ? "ended" : c.status.toLowerCase(),
+                    featured: index === 0, // Mock feature logic for now, first item is featured
+                    image: `/example/prompt-example-${(index % 4) + 1}.png`,
+                    prizes: c.prize_tiers || []
+                }))
+
+                setContests(mapped)
+            } catch (err) {
+                console.error("Failed to fetch contests", err)
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchContests()
+    }, [])
 
     const filtered = contests.filter(c => {
         if (category !== "All" && c.category !== category) return false
@@ -109,53 +147,59 @@ export default function ContestsPage() {
                 )}
 
                 {/* All contests list */}
-                <p className="text-xs text-white/30 font-mono mb-4">{filtered.length} contest{filtered.length !== 1 ? "s" : ""}</p>
-                <div className="flex flex-col gap-4">
-                    {filtered.map(c => (
-                        <Link
-                            key={c.id}
-                            href={`/contests/${c.id}`}
-                            className="group flex flex-col md:flex-row gap-0 border border-[#2a2a30] hover:border-[#00ffff] transition-all bg-[#0d0d0d] overflow-hidden"
-                        >
-                            {/* Thumbnail */}
-                            <div className="md:w-48 h-32 md:h-auto relative shrink-0 overflow-hidden">
-                                <img src={c.image} alt={c.title} className="w-full h-full object-cover opacity-60 group-hover:opacity-90 group-hover:scale-105 transition-all duration-500" />
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#0d0d0d] hidden md:block" />
+                {loading ? (
+                    <div className="text-center py-20 text-white/30 text-sm animate-pulse">Loading contests...</div>
+                ) : (
+                    <>
+                        <p className="text-xs text-white/30 font-mono mb-4">{filtered.length} contest{filtered.length !== 1 ? "s" : ""}</p>
+                        <div className="flex flex-col gap-4">
+                            {filtered.map(c => (
+                                <Link
+                                    key={c.id}
+                                    href={`/contests/${c.id}`}
+                                    className="group flex flex-col md:flex-row gap-0 border border-[#2a2a30] hover:border-[#00ffff] transition-all bg-[#0d0d0d] overflow-hidden"
+                                >
+                                    {/* Thumbnail */}
+                                    <div className="md:w-48 h-32 md:h-auto relative shrink-0 overflow-hidden">
+                                        <img src={c.image} alt={c.title} className="w-full h-full object-cover opacity-60 group-hover:opacity-90 group-hover:scale-105 transition-all duration-500" />
+                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#0d0d0d] hidden md:block" />
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className="flex-1 p-5 flex flex-col justify-between gap-3">
+                                        <div>
+                                            <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+                                                <span className="text-[11px] font-mono text-[#a78bfa]">{c.brand}</span>
+                                                <span className="text-[10px] uppercase px-2 py-0.5 border" style={{ color: statusColors[c.status], borderColor: `${statusColors[c.status]}50`, background: `${statusColors[c.status]}12` }}>{c.status}</span>
+                                                {c.featured && <span className="text-[10px] uppercase px-2 py-0.5 border text-[#ff2d95] border-[#ff2d95]/40 bg-[#ff2d95]/10">Featured</span>}
+                                            </div>
+                                            <h3 className="font-extrabold text-white uppercase text-base line-clamp-1 group-hover:text-[#00ffff] transition-colors">{c.title}</h3>
+                                            <p className="text-xs text-white/40 line-clamp-2 mt-1">{c.description}</p>
+                                        </div>
+
+                                        <div className="flex items-center justify-between flex-wrap gap-3">
+                                            <div className="flex gap-4 text-xs text-white/40">
+                                                <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {c.submissionCount} entries</span>
+                                                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {daysLeft(c.deadline)}</span>
+                                                <span className="hidden md:block text-[#a78bfa]/60">{c.category}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <Trophy className="w-4 h-4 text-[#ff2d95]" />
+                                                <span className="font-extrabold font-mono text-[#ff2d95]">{c.prizePool} {c.currency}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+
+                        {filtered.length === 0 && (
+                            <div className="text-center py-20 text-white/30">
+                                <p className="text-2xl font-bold mb-2">No contests found</p>
+                                <p className="text-sm">Try different filters or <Link href="/contests/create" className="text-[#00ffff] hover:underline">create one</Link></p>
                             </div>
-
-                            {/* Info */}
-                            <div className="flex-1 p-5 flex flex-col justify-between gap-3">
-                                <div>
-                                    <div className="flex items-center gap-3 mb-1.5 flex-wrap">
-                                        <span className="text-[11px] font-mono text-[#a78bfa]">{c.brand}</span>
-                                        <span className="text-[10px] uppercase px-2 py-0.5 border" style={{ color: statusColors[c.status], borderColor: `${statusColors[c.status]}50`, background: `${statusColors[c.status]}12` }}>{c.status}</span>
-                                        {c.featured && <span className="text-[10px] uppercase px-2 py-0.5 border text-[#ff2d95] border-[#ff2d95]/40 bg-[#ff2d95]/10">Featured</span>}
-                                    </div>
-                                    <h3 className="font-extrabold text-white uppercase text-base line-clamp-1 group-hover:text-[#00ffff] transition-colors">{c.title}</h3>
-                                    <p className="text-xs text-white/40 line-clamp-2 mt-1">{c.description}</p>
-                                </div>
-
-                                <div className="flex items-center justify-between flex-wrap gap-3">
-                                    <div className="flex gap-4 text-xs text-white/40">
-                                        <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {c.submissionCount} entries</span>
-                                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {daysLeft(c.deadline)}</span>
-                                        <span className="hidden md:block text-[#a78bfa]/60">{c.category}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Trophy className="w-4 h-4 text-[#ff2d95]" />
-                                        <span className="font-extrabold font-mono text-[#ff2d95]">{c.prizePool} {c.currency}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </Link>
-                    ))}
-                </div>
-
-                {filtered.length === 0 && (
-                    <div className="text-center py-20 text-white/30">
-                        <p className="text-2xl font-bold mb-2">No contests found</p>
-                        <p className="text-sm">Try different filters or <Link href="/contests/create" className="text-[#00ffff] hover:underline">create one</Link></p>
-                    </div>
+                        )}
+                    </>
                 )}
             </div>
         </AppShell>

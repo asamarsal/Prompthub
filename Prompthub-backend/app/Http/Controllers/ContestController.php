@@ -9,7 +9,7 @@ class ContestController extends Controller
 {
     public function index()
     {
-        return response()->json(Contest::where('status', 'OPEN')->get());
+        return response()->json(Contest::withCount('submissions')->whereIn('status', ['OPEN', 'PENDING_FUNDING', 'JUDGING'])->orderBy('created_at', 'desc')->get());
     }
 
     public function show($id)
