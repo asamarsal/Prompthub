@@ -176,7 +176,9 @@ export default function CreatePageContent() {
         functionName: "list-prompt",
         functionArgs: [
           stringAsciiCV(metadataCID), // ipfs-uri
-          uintCV(priceMicroStx)       // price
+          uintCV(priceMicroStx),      // price
+          stringAsciiCV(form.currency), // currency-type
+          uintCV(form.royalty)        // royalty-percent
         ],
         postConditionMode: PostConditionMode.Allow, // Simple for now
         onFinish: async (data) => {
@@ -186,7 +188,7 @@ export default function CreatePageContent() {
           await createPrompt({
             title: form.title,
             description: form.description,
-            price_stx: parseFloat(form.price),
+            price_sbtc: parseFloat(form.price),
             preview_image_url: finalPreviewUrl,
             cid_ipfs: metadataCID,
             ai_model: form.model,

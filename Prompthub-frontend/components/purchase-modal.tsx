@@ -6,7 +6,7 @@ import { Check, Loader2, ExternalLink, Download, LayoutDashboard, Share2 } from 
 import type { Prompt } from "@/lib/mock-data"
 import { useWallet } from "@/lib/wallet-context"
 import { openContractCall } from "@stacks/connect"
-import { uintCV } from "@stacks/transactions"
+import { uintCV, stringAsciiCV, contractPrincipalCV } from "@stacks/transactions"
 import { STACKS_TESTNET, STACKS_MOCKNET } from "@stacks/network"
 
 type PurchaseState = "confirm" | "processing" | "success"
@@ -59,7 +59,9 @@ export function PurchaseModal({
         contractName,
         functionName: 'buy-prompt',
         functionArgs: [
-          uintCV(prompt.contract_id)
+          uintCV(prompt.contract_id),
+          stringAsciiCV(currency),
+          contractPrincipalCV(contractAddress, 'sbtc-token')
         ],
         onFinish: (data) => {
           setTxId(data.txId)

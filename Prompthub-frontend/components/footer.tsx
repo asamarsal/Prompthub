@@ -130,9 +130,15 @@ export function Footer() {
 
         {/* Bottom bar — animates bottom → up */}
         <div ref={bottomBarRef} className="mt-10 pt-6 border-t border-[rgba(180,120,255,0.1)] flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-white/30">
-            2026 PromptHub. Built on Stacks &amp; Bitcoin. Y2K forever.
-          </p>
+          <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
+            <p className="text-xs text-white/30">
+              © 2026 PromptHub <span className="mx-4"> |</span>
+            </p>
+            <div className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
+              <span className="text-[10px] text-white/40 uppercase tracking-widest font-extrabold">Powered by</span>
+              <img src="/icon/full-stacks-logo.png" alt="Stacks" className="h-3.5 object-contain" style={{ filter: "brightness(0) invert(1) opacity(0.8)" }} />
+            </div>
+          </div>
           <div className="flex items-center gap-4 text-xs text-[#a78bfa]/50">
             <span className="text-[#ff2d95]/60">Stacks Network</span>
             <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#ff2d95] to-[#00ffff]" />

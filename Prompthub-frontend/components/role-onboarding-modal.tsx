@@ -36,6 +36,8 @@ export function RoleOnboardingModal({ open, onClose }: Props) {
     const [name, setName] = useState(profile.name || "")
     const [username, setUsername] = useState(profile.username || "")
     const [bio, setBio] = useState(profile.bio || "")
+    const [hourlyRate, setHourlyRate] = useState(profile.hourlyRate || 0.002)
+    const [hourlyRateCurrency, setHourlyRateCurrency] = useState(profile.hourlyRateCurrency || "sBTC")
     const [step, setStep] = useState<"role" | "info">("role")
 
     if (!open) return null
@@ -55,6 +57,8 @@ export function RoleOnboardingModal({ open, onClose }: Props) {
             bio: bio.trim(),
             roles: selectedRoles,
             activeRole: selectedRoles[0],
+            hourlyRate: hourlyRate,
+            hourlyRateCurrency: hourlyRateCurrency,
         }
         saveProfile(updated)
         onClose()
@@ -151,6 +155,30 @@ export function RoleOnboardingModal({ open, onClose }: Props) {
                                         className="w-full px-3 py-2.5 bg-[#111] border border-[#2a2a30] text-white text-sm resize-none focus:outline-none focus:border-[#a855f7] transition-colors"
                                     />
                                 </div>
+
+                                {selectedRoles.includes("artist") && (
+                                    <div>
+                                        <label className="text-xs text-[#a855f7] flex items-center gap-2 uppercase tracking-wider mb-1.5 font-bold">
+                                            <span>Freelance Hourly Rate</span>
+                                            <button
+                                                onClick={() => setHourlyRateCurrency(prev => prev === "sBTC" ? "STX" : "sBTC")}
+                                                className="px-2 py-0.5 bg-[#a855f7]/20 border border-[#a855f7]/50 rounded text-[9px] hover:bg-[#a855f7]/40 transition-colors"
+                                            >
+                                                {hourlyRateCurrency} ⟳
+                                            </button>
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.0001"
+                                            min="0.0001"
+                                            max="1000"
+                                            value={hourlyRate}
+                                            onChange={e => setHourlyRate(parseFloat(e.target.value) || 0.002)}
+                                            className="w-full px-3 py-2.5 bg-[#111] font-mono border border-[#a855f7]/30 text-[#00ffff] font-bold text-sm focus:outline-none focus:border-[#a855f7] transition-colors shadow-inner"
+                                        />
+                                        <p className="text-[10px] text-[#a855f7]/60 mt-1.5 leading-relaxed">Brands will see this rate per hour when hiring you.</p>
+                                    </div>
+                                )}
 
                                 {/* Role summary */}
                                 <div className="p-3 bg-[#a855f7]/5 border border-[#a855f7]/20 flex flex-wrap gap-2">

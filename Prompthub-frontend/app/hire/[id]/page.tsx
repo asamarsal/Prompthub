@@ -1,20 +1,60 @@
 "use client"
 
-import { use } from "react"
+import { useState, useEffect, use } from "react"
 import Link from "next/link"
-import { Star, BadgeCheck, ExternalLink, ArrowLeft, CheckCircle2 } from "lucide-react"
+import { Star, BadgeCheck, ArrowLeft, Loader2 } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
-import { artists } from "@/lib/mock-artists"
+import { fetchUserByAddress, ApiUser } from "@/lib/api"
 
 export default function ArtistPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
-    const artist = artists.find(a => a.id === Number(id))
+    const [user, setUser] = useState<ApiUser | null>(null)
+    const [loading, setLoading] = useState(true)
 
-    if (!artist) return (
-        <div className="min-h-screen flex items-center justify-center text-white/30 text-xl">Artist not found</div>
+    useEffect(() => {
+        fetchUserByAddress(id)
+            .then(data => setUser(data))
+            .catch(err => console.error("Missing artist record:", err))
+            .finally(() => setLoading(false))
+    }, [id])
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center text-white/30 text-xl">
+                <Loader2 className="w-8 h-8 animate-spin text-[#ff2d95]" />
+            </div>
+        )
+    }
+
+    if (!user) return (
+        <div className="min-h-screen flex flex-col gap-4 items-center justify-center text-white/30">
+            <span className="text-xl font-mono">Artist not found</span>
+            <Link href="/hire" className="text-sm text-[#ff2d95] uppercase font-bold tracking-widest hover:underline">Return to Marketplace</Link>
+        </div>
     )
 
     const accent = "#ff2d95"
+
+    const artist = {
+        name: user.name || user.username || "Anonymous Artist",
+        handle: user.username || user.stx_address.substring(0, 8),
+        bio: user.bio || "No bio provided.",
+        available: user.is_available_for_freelance ?? true,
+        rating: 5.0,
+        reviews: 0,
+        completedProjects: 0,
+        hourlyRate: user.hourly_rate || 0.002,
+        currency: user.hourly_rate_currency || "sBTC",
+        tools: ['Midjourney v6', 'DALL-E 3'],
+        specialties: ['Prompt Engineering'],
+        portfolio: [
+            {
+                image: user.cover_url || "https://images.unsplash.com/photo-1620061546252-78d12ee9ae89?q=80&w=2564&auto=format&fit=crop",
+                title: "Showcase",
+                category: "Artwork"
+            }
+        ]
+    }
 
     return (
         <AppShell>
@@ -35,7 +75,7 @@ export default function ArtistPage({ params }: { params: Promise<{ id: string }>
                                 <div>
                                     <div className="flex items-center gap-1.5">
                                         <span className="font-extrabold text-white uppercase">{artist.name}</span>
-                                        {artist.verified && <BadgeCheck className="w-4 h-4 text-[#00ffff]" />}
+                                        <BadgeCheck className="w-4 h-4 text-[#00ffff]" />
                                     </div>
                                     <span className="text-xs font-mono text-[#a78bfa]">@{artist.handle}</span>
                                 </div>

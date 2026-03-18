@@ -40,9 +40,12 @@ class AuthController extends Controller
         
         $request->validate([
             'username' => 'nullable|string|min:3|max:30|unique:users,username,' . $user->id,
+            'is_available_for_freelance' => 'boolean',
+            'hourly_rate' => 'numeric|min:0.0001|max:1000',
+            'hourly_rate_currency' => 'nullable|string|in:sBTC,STX',
         ]);
         
-        $user->update($request->only(['username', 'name', 'bio', 'avatar_url', 'cover_url', 'roles']));
+        $user->update($request->only(['username', 'name', 'bio', 'avatar_url', 'cover_url', 'roles', 'is_available_for_freelance', 'hourly_rate', 'hourly_rate_currency']));
         return response()->json($user);
     }
 }

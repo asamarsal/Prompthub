@@ -10,29 +10,50 @@ plan:
     - transaction-type: contract-publish
       contract-name: nft-trait
       expected-sender: ST13RNZYGR75YSMQY6E3Q004R0ZR9XJ8C194BRGD9
-      cost: 4380
+      cost: 7957261
       path: contracts\nft-trait.clar
+      anchor-block-only: true
+      clarity-version: 2
+    - transaction-type: contract-publish
+      contract-name: sip-010-trait-ft-standard
+      expected-sender: ST13RNZYGR75YSMQY6E3Q004R0ZR9XJ8C194BRGD9
+      cost: 7959866
+      path: contracts\sip-010-trait-ft-standard.clar
+      anchor-block-only: true
+      clarity-version: 2
+    - transaction-type: contract-publish
+      contract-name: prompthub-treasury
+      expected-sender: ST13RNZYGR75YSMQY6E3Q004R0ZR9XJ8C194BRGD9
+      cost: 8734811
+      path: contracts\prompthub-treasury.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: prompthub-contests
       expected-sender: ST13RNZYGR75YSMQY6E3Q004R0ZR9XJ8C194BRGD9
-      cost: 87140
+      cost: 8807685
       path: contracts\prompthub-contests.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: prompthub-escrow-hire
       expected-sender: ST13RNZYGR75YSMQY6E3Q004R0ZR9XJ8C194BRGD9
-      cost: 39410
+      cost: 8760531
       path: contracts\prompthub-escrow-hire.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: prompthub-marketplace
       expected-sender: ST13RNZYGR75YSMQY6E3Q004R0ZR9XJ8C194BRGD9
-      cost: 28860
+      cost: 8717972
       path: contracts\prompthub-marketplace.clar
+      anchor-block-only: true
+      clarity-version: 2
+    - transaction-type: contract-publish
+      contract-name: sbtc-token
+      expected-sender: ST13RNZYGR75YSMQY6E3Q004R0ZR9XJ8C194BRGD9
+      cost: 8695209
+      path: contracts\sbtc-token.clar
       anchor-block-only: true
       clarity-version: 2
     epoch: '2.5'

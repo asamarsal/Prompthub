@@ -26,7 +26,7 @@ class X402Middleware
         $ownerAddress = $prompt->user?->stx_address ?? config('stacks.marketplace_contract_address', 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM');
 
         // Required amount: prompt price in microSTX (1 STX = 1,000,000 µSTX)
-        $requiredMicroStx = (int) ($prompt->price_stx * 1_000_000);
+        $requiredMicroStx = (int) ($prompt->price_sbtc * 1_000_000);
 
         // 1. Check ownership via transactions table (if user already purchased)
         if ($user) {

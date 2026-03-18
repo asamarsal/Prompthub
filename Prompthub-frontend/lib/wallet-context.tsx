@@ -32,6 +32,9 @@ export interface UserProfile {
   coverImage: string     // cover banner image URL
   roles: UserRole[]      // can have multiple roles
   activeRole: UserRole   // currently displayed role
+  isAvailableForFreelance: boolean
+  hourlyRate: number     // e.g. 0.002
+  hourlyRateCurrency: string // "sBTC" | "STX"
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -55,6 +58,9 @@ const DEFAULT_PROFILE: UserProfile = {
   coverImage: "",
   roles: [],
   activeRole: "buyer",
+  isAvailableForFreelance: true,
+  hourlyRate: 0.002,
+  hourlyRateCurrency: "sBTC",
 }
 
 interface WalletState {
@@ -129,6 +135,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           coverImage: user.cover_url ?? profile.coverImage,
           roles: (user.roles as UserRole[]) ?? profile.roles,
           activeRole: ((user.roles as UserRole[])?.[0]) ?? profile.activeRole ?? "buyer",
+          isAvailableForFreelance: user.is_available_for_freelance ?? profile.isAvailableForFreelance ?? true,
+          hourlyRate: (user.hourly_rate ? Number(user.hourly_rate) : null) ?? profile.hourlyRate ?? 0.002,
+          hourlyRateCurrency: user.hourly_rate_currency ?? profile.hourlyRateCurrency ?? "sBTC",
         }
         localStorage.setItem(PROFILE_KEY, JSON.stringify(merged))
         setWallet(w => ({
@@ -160,6 +169,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         coverImage: user.cover_url ?? localProfile.coverImage,
         roles: (user.roles as UserRole[]) ?? localProfile.roles,
         activeRole: ((user.roles as UserRole[])?.[0]) ?? localProfile.activeRole ?? "buyer",
+        isAvailableForFreelance: user.is_available_for_freelance ?? localProfile.isAvailableForFreelance ?? true,
+        hourlyRate: (user.hourly_rate ? Number(user.hourly_rate) : null) ?? localProfile.hourlyRate ?? 0.002,
+        hourlyRateCurrency: user.hourly_rate_currency ?? localProfile.hourlyRateCurrency ?? "sBTC",
       }
       localStorage.setItem(PROFILE_KEY, JSON.stringify(merged))
       setWallet({
@@ -219,6 +231,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         avatar_url: profile.avatarUrl || undefined,
         cover_url: profile.coverImage || undefined,
         roles: profile.roles,
+        is_available_for_freelance: profile.isAvailableForFreelance,
+        hourly_rate: profile.hourlyRate,
+        hourly_rate_currency: profile.hourlyRateCurrency,
       })
     } catch {
       // Non-blocking — local state is already updated

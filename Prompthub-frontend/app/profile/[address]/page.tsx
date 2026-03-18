@@ -112,6 +112,9 @@ function ProfileContent({ params }: { params: { address: string } }) {
                         coverImage: user.cover_url ?? "",
                         roles: (user.roles as UserRole[]) ?? [],
                         activeRole: (user.roles as UserRole[])?.[0] ?? "buyer",
+                        isAvailableForFreelance: user.is_available_for_freelance ?? true,
+                        hourlyRate: user.hourly_rate ?? 0.002,
+                        hourlyRateCurrency: user.hourly_rate_currency ?? "sBTC",
                     })
                 })
                 .catch(err => {
@@ -133,7 +136,7 @@ function ProfileContent({ params }: { params: { address: string } }) {
                         id: p.id,
                         title: p.title,
                         description: p.description,
-                        price: parseFloat(p.price_stx),
+                        price: parseFloat(p.price_sbtc),
                         image: p.preview_image_url || 'https://images.unsplash.com/photo-1614729939124-032f0b5609ce?w=800&q=80',
                         model: p.ai_model,
                         category: p.category,
@@ -177,6 +180,9 @@ function ProfileContent({ params }: { params: { address: string } }) {
         avatar: "",
         avatarUrl: "",
         coverImage: "",
+        isAvailableForFreelance: true,
+        hourlyRate: 0.002,
+        hourlyRateCurrency: "sBTC",
     })
 
     // Determine what name to show. Priority: Profile > Truncated Address > "Unknown User"

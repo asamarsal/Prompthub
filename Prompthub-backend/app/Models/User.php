@@ -23,12 +23,17 @@ class User extends Authenticatable
         'avatar_url',
         'cover_url',
         'roles',
+        'is_available_for_freelance',
+        'hourly_rate',
+        'hourly_rate_currency',
     ];
 
     protected function casts(): array
     {
         return [
             'roles' => 'array',
+            'is_available_for_freelance' => 'boolean',
+            'hourly_rate' => 'decimal:4',
         ];
     }
 

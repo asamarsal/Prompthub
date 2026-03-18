@@ -188,6 +188,9 @@ export interface ApiUser {
     avatar_url: string | null
     cover_url: string | null
     roles: string[] | null
+    is_available_for_freelance?: boolean
+    hourly_rate?: number
+    hourly_rate_currency?: string
 }
 
 export interface LoginResponse {
@@ -225,6 +228,14 @@ export async function fetchUserByAddress(address: string): Promise<ApiUser> {
 }
 
 /**
+ * GET /api/artists
+ * Returns all users with the artist role.
+ */
+export async function fetchArtists(): Promise<any[]> {
+    return request<any[]>("/api/artists")
+}
+
+/**
  * PUT /api/users/me
  * Updates the user's profile (name, bio, avatar_url, roles).
  */
@@ -235,6 +246,9 @@ export async function updateProfile(data: {
     avatar_url?: string
     cover_url?: string
     roles?: string[]
+    is_available_for_freelance?: boolean
+    hourly_rate?: number
+    hourly_rate_currency?: string
 }): Promise<ApiUser> {
     return request<ApiUser>("/api/users/me", {
         method: "PUT",

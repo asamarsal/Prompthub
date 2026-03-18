@@ -43,7 +43,7 @@ export default function CreateContestPage() {
 
         try {
             const { openContractCall } = await import("@stacks/connect")
-            const { uintCV, PostConditionMode } = await import("@stacks/transactions")
+            const { uintCV, stringAsciiCV, contractPrincipalCV, PostConditionMode } = await import("@stacks/transactions")
             const { STACKS_TESTNET } = await import("@stacks/network")
 
             const totalAmount = prizes.reduce((acc, p) => acc + (Number(p.amount) || 0), 0)
@@ -69,6 +69,8 @@ export default function CreateContestPage() {
                     uintCV(tier4),
                     uintCV(tier5),
                     uintCV(100000), // mock future block height
+                    stringAsciiCV(currency),
+                    contractPrincipalCV("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM", "sbtc-token")
                 ],
                 postConditionMode: PostConditionMode.Allow,
                 onFinish: async (data) => {
@@ -274,6 +276,11 @@ export default function CreateContestPage() {
                     >
                         {isSubmitting ? <><Loader2 className="w-5 h-5 animate-spin" /> Escrowing Funds...</> : "🏆 Launch Contest & Escrow Prize Pool"}
                     </button>
+
+                    <div className="mt-4 flex items-center justify-center gap-1.5 opacity-60">
+                        <span className="text-[10px] uppercase tracking-widest font-bold text-white/50">Smart Contract Escrow by</span>
+                        <img src="/icon/stacks-logo.png" alt="Stacks" className="h-3" />
+                    </div>
                 </div>
             </div>
         </AppShell>

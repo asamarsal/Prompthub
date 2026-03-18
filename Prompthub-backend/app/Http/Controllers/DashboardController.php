@@ -69,7 +69,7 @@ class DashboardController extends Controller
                     'id' => $p->id,
                     'title' => $p->title,
                     'image' => $p->preview_image_url,
-                    'price' => (float)$p->price_stx,
+                    'price' => (float)$p->price_sbtc,
                     'sales' => $p->total_sold,
                     'model' => $p->ai_model,
                     'is_active' => $p->is_published,

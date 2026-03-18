@@ -14,7 +14,7 @@ class Prompt extends Model
         'user_id',
         'title',
         'description',
-        'price_stx',
+        'price_sbtc',
         'preview_image_url',
         'cid_ipfs',
         'ai_model',
@@ -36,7 +36,7 @@ class Prompt extends Model
 
     protected $casts = [
         'tags' => 'array',
-        'price_stx' => 'decimal:6',
+        'price_sbtc' => 'decimal:6',
         'is_nsfw' => 'boolean',
         'is_published' => 'boolean',
         'is_curated' => 'boolean',

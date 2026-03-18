@@ -28,6 +28,7 @@ Route::get('/contests', [ContestController::class, 'index']);
 Route::get('/contests/{id}', [ContestController::class, 'show']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/ai-models', [AiModelController::class, 'index']);
+Route::get('/artists', [UserController::class, 'artists']);
 Route::get('/artists/{id}/reviews', [ArtistReviewController::class, 'index']);
 Route::get('/prompts/{id}/reviews', [ReviewController::class, 'index']);
 Route::get('/prompts/{id}/transactions', [TransactionController::class, 'promptHistory']);

@@ -1,9 +1,11 @@
 ;; prompthub-escrow-hire
 ;; Escrow contract for P2P designer hiring.
+(use-trait sip-010-trait .sip-010-trait-ft-standard.sip-010-trait)
 
 (define-constant err-not-authorized (err u100))
 (define-constant err-job-not-found (err u101))
 (define-constant err-invalid-status (err u102))
+(define-constant err-invalid-currency (err u103))
 
 (define-constant platform-admin tx-sender)
 (define-constant platform-fee-percent u25) ;; 2.5%
@@ -14,33 +16,44 @@
     client: principal,
     artist: principal,
     amount: uint,
-    status: (string-ascii 20) ;; "PENDING", "COMPLETED", "REFUNDED", "DISPUTED"
+    status: (string-ascii 20), ;; "PENDING", "COMPLETED", "REFUNDED", "DISPUTED"
+    currency-type: (string-ascii 10),
+    token-contract: principal,
   }
 )
 
 (define-data-var next-job-id uint u1)
-
-(define-map artist-balances principal uint)
 
 ;; Read-Only
 (define-read-only (get-job (job-id uint))
   (map-get? jobs job-id)
 )
 
-(define-read-only (get-artist-balance (artist principal))
-  (default-to u0 (map-get? artist-balances artist))
-)
-
-;; Create Job (Client deposits STX)
-(define-public (create-hire-job (artist principal) (amount uint))
+;; Create Job (Client deposits STX/sBTC)
+(define-public (create-hire-job
+    (artist principal)
+    (amount uint)
+    (currency-type (string-ascii 10))
+    (sbtc-contract <sip-010-trait>)
+  )
   (let ((job-id (var-get next-job-id)))
     ;; Kunci dana ke Smart Contract PENGAMAN
-    (try! (stx-transfer? amount tx-sender (as-contract tx-sender)))
+    (if (is-eq currency-type "STX")
+      (try! (stx-transfer? amount tx-sender (as-contract tx-sender)))
+      (begin
+        (asserts! (is-eq currency-type "sBTC") err-invalid-currency)
+        (try! (contract-call? sbtc-contract transfer amount tx-sender
+          (as-contract tx-sender) none
+        ))
+      )
+    )
     (map-set jobs job-id {
       client: tx-sender,
       artist: artist,
       amount: amount,
-      status: "PENDING"
+      status: "PENDING",
+      currency-type: currency-type,
+      token-contract: (contract-of sbtc-contract),
     })
     (var-set next-job-id (+ job-id u1))
     (ok job-id)
@@ -48,62 +61,68 @@
 )
 
 ;; Complete Job
-(define-public (complete-job (job-id uint))
-  (let
-    (
+(define-public (complete-job
+    (job-id uint)
+    (sbtc-contract <sip-010-trait>)
+  )
+  (let (
       (job (unwrap! (map-get? jobs job-id) err-job-not-found))
       (client (get client job))
       (artist (get artist job))
       (amount (get amount job))
+      (currency-type (get currency-type job))
+      (token-addr (get token-contract job))
       (fee (/ (* amount platform-fee-percent) u1000))
       (payout (- amount fee))
-      (current-balance (get-artist-balance artist))
     )
     (asserts! (is-eq tx-sender client) err-not-authorized)
     (asserts! (is-eq (get status job) "PENDING") err-invalid-status)
-    
-    ;; Fee to admin langsung cair
-    (try! (as-contract (stx-transfer? fee tx-sender platform-admin)))
-    
-    ;; Payout ke saldo internal kontrak Artist (belum cair ke wallet asli)
-    (map-set artist-balances artist (+ current-balance payout))
-    
+
+    (if (is-eq currency-type "STX")
+      (begin
+        (try! (as-contract (contract-call? .prompthub-treasury deposit-stx fee)))
+        (try! (as-contract (stx-transfer? payout tx-sender artist)))
+      )
+      (begin
+        (asserts! (is-eq (contract-of sbtc-contract) token-addr)
+          err-invalid-currency
+        )
+        (try! (as-contract (contract-call? .prompthub-treasury deposit-sbtc fee sbtc-contract)))
+        (try! (as-contract (contract-call? sbtc-contract transfer payout tx-sender artist none)))
+      )
+    )
+
     (map-set jobs job-id (merge job { status: "COMPLETED" }))
     (ok true)
   )
 )
 
-;; Withdraw Funds (Minimal 10 STX = 10000000 mSTX)
-(define-public (withdraw-funds)
-  (let
-    (
-      (balance (get-artist-balance tx-sender))
-    )
-    ;; Minimal 10 STX (asumsi 1 STX = 1.000.000 uSTX)
-    (asserts! (>= balance u10000000) err-not-authorized) 
-    
-    ;; Reset saldo internal jadi 0
-    (map-set artist-balances tx-sender u0)
-    
-    ;; Kirim uang sungguhan dari Contract Vault ke Wallet Artist
-    (try! (as-contract (stx-transfer? balance tx-sender tx-sender)))
-    
-    (ok balance)
-  )
-)
-
 ;; Refund Job
-(define-public (refund-job (job-id uint))
-  (let
-    (
+(define-public (refund-job
+    (job-id uint)
+    (sbtc-contract <sip-010-trait>)
+  )
+  (let (
       (job (unwrap! (map-get? jobs job-id) err-job-not-found))
       (client (get client job))
       (amount (get amount job))
+      (currency-type (get currency-type job))
+      (token-addr (get token-contract job))
     )
-    (asserts! (or (is-eq tx-sender client) (is-eq tx-sender platform-admin)) err-not-authorized)
+    (asserts! (or (is-eq tx-sender client) (is-eq tx-sender platform-admin))
+      err-not-authorized
+    )
     (asserts! (is-eq (get status job) "PENDING") err-invalid-status)
-    
-    (try! (as-contract (stx-transfer? amount tx-sender client)))
+
+    (if (is-eq currency-type "STX")
+      (try! (as-contract (stx-transfer? amount tx-sender client)))
+      (begin
+        (asserts! (is-eq (contract-of sbtc-contract) token-addr)
+          err-invalid-currency
+        )
+        (try! (as-contract (contract-call? sbtc-contract transfer amount tx-sender client none)))
+      )
+    )
     (map-set jobs job-id (merge job { status: "REFUNDED" }))
     (ok true)
   )
@@ -114,23 +133,36 @@
   (let ((job (unwrap! (map-get? jobs job-id) err-job-not-found)))
     (asserts! (is-eq tx-sender platform-admin) err-not-authorized)
     (asserts! (is-eq (get status job) "PENDING") err-invalid-status)
-    
+
     (map-set jobs job-id (merge job { status: "DISPUTED" }))
     (ok true)
   )
 )
 
 ;; Admin resolve-dispute
-(define-public (resolve-dispute (job-id uint) (payout-to principal))
-  (let
-    (
+(define-public (resolve-dispute
+    (job-id uint)
+    (payout-to principal)
+    (sbtc-contract <sip-010-trait>)
+  )
+  (let (
       (job (unwrap! (map-get? jobs job-id) err-job-not-found))
       (amount (get amount job))
+      (currency-type (get currency-type job))
+      (token-addr (get token-contract job))
     )
     (asserts! (is-eq tx-sender platform-admin) err-not-authorized)
     (asserts! (is-eq (get status job) "DISPUTED") err-invalid-status)
-    
-    (try! (as-contract (stx-transfer? amount tx-sender payout-to)))
+
+    (if (is-eq currency-type "STX")
+      (try! (as-contract (stx-transfer? amount tx-sender payout-to)))
+      (begin
+        (asserts! (is-eq (contract-of sbtc-contract) token-addr)
+          err-invalid-currency
+        )
+        (try! (as-contract (contract-call? sbtc-contract transfer amount tx-sender payout-to none)))
+      )
+    )
     (map-set jobs job-id (merge job { status: "RESOLVED" }))
     (ok true)
   )

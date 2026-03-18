@@ -186,9 +186,15 @@ export function WalletSelectorModal({
                     })}
                 </div>
 
-                <p className="text-[10px] text-[#a78bfa]/60 text-center mt-5 font-mono">
-                    By connecting, you agree to our Terms of Service
-                </p>
+                <div className="mt-6 flex flex-col items-center justify-center gap-2">
+                    <div className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-opacity bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-[#a78bfa]">Secured by</span>
+                        <img src="/icon/stacks-logo.png" alt="Stacks Network" className="h-3.5 object-contain" />
+                    </div>
+                    <p className="text-[9px] text-[#a78bfa]/40 text-center font-mono mt-1">
+                        By connecting, you agree to our Terms of Service
+                    </p>
+                </div>
             </div>
         </div>
     )

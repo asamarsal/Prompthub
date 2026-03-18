@@ -27,7 +27,7 @@ class PromptSeeder extends Seeder
             [
                 'title' => 'Hyper-Realistic Cyberpunk Cityscape',
                 'description' => 'A detailed cyberpunk street at night with neon lights, rain reflections, and flying cars. Optimized for high resolution.',
-                'price_stx' => 10.5,
+                'price_sbtc' => 10.5,
                 'preview_image_url' => 'https://images.unsplash.com/photo-1605142859862-978be7eba909?q=80&w=2070&auto=format&fit=crop',
                 'cid_ipfs' => 'QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco',
                 'ai_model' => 'Midjourney v6',
@@ -39,7 +39,7 @@ class PromptSeeder extends Seeder
             [
                 'title' => 'Ethereal Forest Spirit Portrait',
                 'description' => 'Beautiful portrait of a forest spirit made of leaves and starlight. Cinematic lighting and magical atmosphere.',
-                'price_stx' => 5.0,
+                'price_sbtc' => 5.0,
                 'preview_image_url' => 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1974&auto=format&fit=crop',
                 'cid_ipfs' => 'QmYwAPJzvfS6RE93n9k6dAnNHJp93n9k6dAnNHJp93n9k6d',
                 'ai_model' => 'DALL-E 3',
@@ -53,7 +53,7 @@ class PromptSeeder extends Seeder
             [
                 'title' => 'Ultimate SEO Blog Post Generator',
                 'description' => 'Advanced prompt for generating high-ranking SEO articles on any topic. Includes outline, keywords, and meta description.',
-                'price_stx' => 15.0,
+                'price_sbtc' => 15.0,
                 'preview_image_url' => 'https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=1973&auto=format&fit=crop',
                 'cid_ipfs' => 'QmZ4tjB7S5N4pE9z8wWn1q2r3s4t5u6v7w8x9y0z1a2b3c',
                 'ai_model' => 'GPT-4o',
@@ -65,7 +65,7 @@ class PromptSeeder extends Seeder
             [
                 'title' => 'Creative Sci-Fi Worldbuilder',
                 'description' => 'Generate deep lore, factions, and planetary descriptions for your next science fiction novel or RPG campaign.',
-                'price_stx' => 8.25,
+                'price_sbtc' => 8.25,
                 'preview_image_url' => 'https://images.unsplash.com/photo-1614728263952-84ea256f9679?q=80&w=2054&auto=format&fit=crop',
                 'cid_ipfs' => 'Qmaa1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2',
                 'ai_model' => 'Claude 3.5 Sonnet',
@@ -79,7 +79,7 @@ class PromptSeeder extends Seeder
             [
                 'title' => 'Smart Contract Security Auditor',
                 'description' => 'Analyze smart contracts for vulnerabilities, reentrancy attacks, and optimization opportunities. Works best with Solidity.',
-                'price_stx' => 25.0,
+                'price_sbtc' => 25.0,
                 'preview_image_url' => 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=2070&auto=format&fit=crop',
                 'cid_ipfs' => 'Qmbb2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w',
                 'ai_model' => 'GitHub Copilot',
@@ -93,7 +93,7 @@ class PromptSeeder extends Seeder
             [
                 'title' => 'Cinematic Nature Drone Shot',
                 'description' => 'Prompt for generating breathtaking 4K drone footage of mountains and waterfalls. Smooth camera motion and realistic physics.',
-                'price_stx' => 30.0,
+                'price_sbtc' => 30.0,
                 'preview_image_url' => 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=2070&auto=format&fit=crop',
                 'cid_ipfs' => 'Qmcc3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x',
                 'ai_model' => 'Sora',
@@ -107,7 +107,7 @@ class PromptSeeder extends Seeder
             [
                 'title' => 'Lo-Fi Chill Beats Producer',
                 'description' => 'Create endless relaxing lo-fi tracks for studying or working. Optimized for atmosphere and soft instrumentals.',
-                'price_stx' => 12.0,
+                'price_sbtc' => 12.0,
                 'preview_image_url' => 'https://images.unsplash.com/photo-1516280440614-37939bb92583?q=80&w=2070&auto=format&fit=crop',
                 'cid_ipfs' => 'Qmdd4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y',
                 'ai_model' => 'Suno AI',

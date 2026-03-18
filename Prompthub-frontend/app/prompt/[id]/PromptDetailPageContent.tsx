@@ -58,7 +58,7 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                     id: res.id,
                     title: res.title,
                     description: res.description,
-                    price: parseFloat(res.price_stx),
+                    price: parseFloat(res.price_sbtc),
                     model: res.ai_model,
                     category: res.category,
                     sales: res.total_sold,

@@ -69,10 +69,10 @@ class PromptController extends Controller
                 $query->orderBy('total_sold', 'desc');
                 break;
             case 'price_asc':
-                $query->orderBy('price_stx', 'asc');
+                $query->orderBy('price_sbtc', 'asc');
                 break;
             case 'price_desc':
-                $query->orderBy('price_stx', 'desc');
+                $query->orderBy('price_sbtc', 'desc');
                 break;
             case 'newest':
             default:
@@ -101,7 +101,7 @@ class PromptController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'price_stx' => 'required|numeric|min:0',
+            'price_sbtc' => 'required|numeric|min:0',
             'preview_image_url' => 'nullable|string',
             'cid_ipfs' => 'required|string',
             'ai_model' => 'nullable|string',

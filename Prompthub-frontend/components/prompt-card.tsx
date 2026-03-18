@@ -168,7 +168,7 @@ export function PromptCard({ prompt }: { prompt: Prompt & { isBookmarked?: boole
                   <span className="text-[1.4rem] font-display font-black leading-none tracking-tight text-[#ff2d95]">
                     {typeof prompt.price === 'number' ? prompt.price.toFixed(3) : "0.000"}
                   </span>
-                  <span className="text-sm font-display font-bold text-[#ff2d95]">sBTC</span>
+                  <span className="text-sm font-display font-bold text-[#ff2d95]">{prompt.currency || "sBTC"}</span>
                 </div>
                 <span className="text-[10px] font-mono text-muted-foreground ml-2">
                   ~${((typeof prompt.price === 'number' ? prompt.price : 0) * stxPrice).toFixed(2)} USD

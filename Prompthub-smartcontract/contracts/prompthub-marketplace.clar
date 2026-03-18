@@ -5,10 +5,12 @@
 (impl-trait .nft-trait.nft-trait)
 
 ;; Constants
+(use-trait sip-010-trait .sip-010-trait-ft-standard.sip-010-trait)
+
 (define-constant err-not-authorized (err u100))
 (define-constant err-prompt-not-found (err u102))
+(define-constant err-invalid-currency (err u103))
 
-(define-constant platform-admin tx-sender)
 (define-constant platform-fee-percent u25) ;; 2.5% = 25 / 1000
 
 ;; Define the NFT
@@ -28,6 +30,8 @@
   {
     creator: principal,
     price: uint,
+    currency-type: (string-ascii 10), ;; "STX" or "sBTC"
+    royalty-percent: uint, ;; 0-1000 (e.g. 50 = 5%)
     is-active: bool,
   }
 )
@@ -67,6 +71,8 @@
 (define-public (list-prompt
     (ipfs-uri (string-ascii 256))
     (price uint)
+    (currency-type (string-ascii 10))
+    (royalty-percent uint)
   )
   (let ((prompt-id (+ (var-get last-prompt-id) u1)))
     ;; Mint the SIP-009 NFT
@@ -79,6 +85,8 @@
     (map-set prompts prompt-id {
       creator: tx-sender,
       price: price,
+      currency-type: currency-type,
+      royalty-percent: royalty-percent,
       is-active: true,
     })
 
@@ -88,22 +96,52 @@
 )
 
 ;; Buy a prompt
-(define-public (buy-prompt (prompt-id uint))
+(define-public (buy-prompt
+    (prompt-id uint)
+    (sbtc-contract <sip-010-trait>)
+  )
   (let (
       (prompt-data (unwrap! (map-get? prompts prompt-id) err-prompt-not-found))
       (price (get price prompt-data))
+      (currency-type (get currency-type prompt-data))
+      (creator (get creator prompt-data))
+      (royalty-pct (get royalty-percent prompt-data))
       (seller (unwrap! (nft-get-owner? prompt prompt-id) err-prompt-not-found))
       (fee (/ (* price platform-fee-percent) u1000))
-      (seller-amount (- price fee))
+      (royalty (/ (* price royalty-pct) u1000))
+      (seller-amount (- (- price fee) royalty))
     )
     (asserts! (get is-active prompt-data) err-prompt-not-found)
     (asserts! (not (is-eq tx-sender seller)) err-not-authorized)
 
-    ;; Transfer total fee to admin
-    (try! (stx-transfer? fee tx-sender platform-admin))
-
-    ;; Transfer the rest to seller
-    (try! (stx-transfer? seller-amount tx-sender seller))
+    (if (is-eq currency-type "STX")
+      (begin
+        ;; Transfer STX Fee to Treasury
+        (try! (contract-call? .prompthub-treasury deposit-stx fee))
+        ;; Transfer Royalty to original Creator (if this is a secondary sale)
+        (if (and (> royalty u0) (not (is-eq seller creator)))
+          (try! (stx-transfer? royalty tx-sender creator))
+          true
+        )
+        ;; Transfer strictly-seller remainder
+        (try! (stx-transfer? seller-amount tx-sender seller))
+      )
+      (begin
+        ;; Verify correct sBTC contract is being passed dynamically
+        (asserts! (is-eq currency-type "sBTC") err-invalid-currency)
+        ;; Transfer sBTC Fee to Treasury
+        (try! (contract-call? .prompthub-treasury deposit-sbtc fee sbtc-contract))
+        ;; Transfer Royalty to original Creator (if this is a secondary sale)
+        (if (and (> royalty u0) (not (is-eq seller creator)))
+          (try! (contract-call? sbtc-contract transfer royalty tx-sender creator none))
+          true
+        )
+        ;; Transfer remainder
+        (try! (contract-call? sbtc-contract transfer seller-amount tx-sender seller
+          none
+        ))
+      )
+    )
 
     ;; Transfer the NFT ownership via SIP-009
     (try! (nft-transfer? prompt prompt-id seller tx-sender))

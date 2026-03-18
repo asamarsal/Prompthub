@@ -21,7 +21,7 @@ const navLinks = [
 
 export function Navigation() {
   const pathname = usePathname()
-  const { isConnected, address, balance, stxBalance, disconnect, connect, profile, needsOnboarding, switchRole } = useWallet()
+  const { isConnected, address, balance, stxBalance, disconnect, connect, profile, needsOnboarding, switchRole, saveProfile } = useWallet()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
@@ -188,6 +188,29 @@ export function Navigation() {
                               </button>
                             )
                           })}
+                        </div>
+                      )}
+
+                      {profile.roles.includes("artist") && (
+                        <div className="mt-3 pt-3 border-t border-[#2a2a30] flex items-center justify-between group">
+                          <span className="text-[10px] text-white/50 uppercase tracking-widest font-bold flex items-center gap-1.5 transition-colors group-hover:text-white/80">
+                            Available for hire
+                          </span>
+                          <button
+                            onClick={() => saveProfile({ ...profile, isAvailableForFreelance: !profile.isAvailableForFreelance })}
+                            title={profile.isAvailableForFreelance ? "Set status to BUSY" : "Set status to AVAILABLE"}
+                            className={cn(
+                              "w-9 h-5 rounded-full relative transition-colors shadow-inner",
+                              profile.isAvailableForFreelance ? "bg-[#b4ff39]" : "bg-[#2a2a30]"
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform shadow-md",
+                                profile.isAvailableForFreelance ? "translate-x-4" : "translate-x-0.5"
+                              )}
+                            />
+                          </button>
                         </div>
                       )}
                     </div>
