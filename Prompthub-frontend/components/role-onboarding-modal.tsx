@@ -25,6 +25,17 @@ const ALL_ROLES: { role: UserRole; label: string; icon: string; desc: string }[]
     },
 ]
 
+const ALL_SPECIALIZATIONS = [
+    { id: 1, label: "Brand Identity" },
+    { id: 2, label: "Product Photography" },
+    { id: 3, label: "Ad Creative" },
+    { id: 4, label: "Video / Motion" },
+    { id: 5, label: "Character Design" },
+    { id: 6, label: "3D Render" },
+    { id: 7, label: "NFT Collection" },
+    { id: 8, label: "Social Media Pack" },
+]
+
 interface Props {
     open: boolean
     onClose: () => void
@@ -38,6 +49,7 @@ export function RoleOnboardingModal({ open, onClose }: Props) {
     const [bio, setBio] = useState(profile.bio || "")
     const [hourlyRate, setHourlyRate] = useState(profile.hourlyRate || 0.002)
     const [hourlyRateCurrency, setHourlyRateCurrency] = useState(profile.hourlyRateCurrency || "sBTC")
+    const [specs, setSpecs] = useState<number[]>(profile.specialization_id || [])
     const [step, setStep] = useState<"role" | "info">("role")
 
     if (!open) return null
@@ -59,6 +71,7 @@ export function RoleOnboardingModal({ open, onClose }: Props) {
             activeRole: selectedRoles[0],
             hourlyRate: hourlyRate,
             hourlyRateCurrency: hourlyRateCurrency,
+            specialization_id: specs,
         }
         saveProfile(updated)
         onClose()
@@ -67,11 +80,12 @@ export function RoleOnboardingModal({ open, onClose }: Props) {
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
             <div
-                className="bg-[#0a0a0c] border-2 border-[#a855f7] max-w-lg w-full relative"
+                className="bg-[#0a0a0c] border-2 border-[#a855f7] max-w-lg w-full relative max-h-[90vh] overflow-y-auto"
                 style={{ boxShadow: "8px 8px 0 0 #a855f7" }}
+                onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a2a30]">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a2a30] sticky top-0 bg-[#0a0a0c] z-10">
                     <div>
                         <p className="text-[10px] text-[#a855f7] font-mono uppercase tracking-widest mb-0.5">// PROFILE SETUP</p>
                         <h2 className="text-lg font-extrabold text-white uppercase">
@@ -157,27 +171,59 @@ export function RoleOnboardingModal({ open, onClose }: Props) {
                                 </div>
 
                                 {selectedRoles.includes("artist") && (
-                                    <div>
-                                        <label className="text-xs text-[#a855f7] flex items-center gap-2 uppercase tracking-wider mb-1.5 font-bold">
-                                            <span>Freelance Hourly Rate</span>
-                                            <button
-                                                onClick={() => setHourlyRateCurrency(prev => prev === "sBTC" ? "STX" : "sBTC")}
-                                                className="px-2 py-0.5 bg-[#a855f7]/20 border border-[#a855f7]/50 rounded text-[9px] hover:bg-[#a855f7]/40 transition-colors"
-                                            >
-                                                {hourlyRateCurrency} ⟳
-                                            </button>
-                                        </label>
-                                        <input
-                                            type="number"
-                                            step="0.0001"
-                                            min="0.0001"
-                                            max="1000"
-                                            value={hourlyRate}
-                                            onChange={e => setHourlyRate(parseFloat(e.target.value) || 0.002)}
-                                            className="w-full px-3 py-2.5 bg-[#111] font-mono border border-[#a855f7]/30 text-[#00ffff] font-bold text-sm focus:outline-none focus:border-[#a855f7] transition-colors shadow-inner"
-                                        />
-                                        <p className="text-[10px] text-[#a855f7]/60 mt-1.5 leading-relaxed">Brands will see this rate per hour when hiring you.</p>
-                                    </div>
+                                    <>
+                                        <div>
+                                            <label className="text-xs text-white/40 uppercase tracking-wider block mb-2">Specializations <span className="text-[10px] lowercase">(max 3)</span></label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {ALL_SPECIALIZATIONS.map(spec => {
+                                                    const active = specs.includes(spec.id)
+                                                    return (
+                                                        <button
+                                                            key={spec.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (active) {
+                                                                    setSpecs(prev => prev.filter(id => id !== spec.id))
+                                                                } else {
+                                                                    if (specs.length < 3) setSpecs(prev => [...prev, spec.id])
+                                                                }
+                                                            }}
+                                                            className="text-xs font-mono px-3 py-1.5 border transition-all uppercase"
+                                                            style={{
+                                                                borderColor: active ? "#a855f7" : "#2a2a30",
+                                                                background: active ? "#a855f720" : "transparent",
+                                                                color: active ? "#fff" : "rgba(255,255,255,0.4)"
+                                                            }}
+                                                        >
+                                                            {spec.label}
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-xs text-[#a855f7] flex items-center gap-2 uppercase tracking-wider mb-1.5 font-bold">
+                                                <span>Freelance Hourly Rate</span>
+                                                <button
+                                                    onClick={() => setHourlyRateCurrency(prev => prev === "sBTC" ? "STX" : "sBTC")}
+                                                    className="px-2 py-0.5 bg-[#a855f7]/20 border border-[#a855f7]/50 rounded text-[9px] hover:bg-[#a855f7]/40 transition-colors"
+                                                >
+                                                    {hourlyRateCurrency} ⟳
+                                                </button>
+                                            </label>
+                                            <input
+                                                type="number"
+                                                step="0.0001"
+                                                min="0.0001"
+                                                max="1000"
+                                                value={hourlyRate}
+                                                onChange={e => setHourlyRate(parseFloat(e.target.value) || 0.002)}
+                                                className="w-full px-3 py-2.5 bg-[#111] font-mono border border-[#a855f7]/30 text-[#00ffff] font-bold text-sm focus:outline-none focus:border-[#a855f7] transition-colors shadow-inner"
+                                            />
+                                            <p className="text-[10px] text-[#a855f7]/60 mt-1.5 leading-relaxed">Brands will see this rate per hour when hiring you.</p>
+                                        </div>
+                                    </>
                                 )}
 
                                 {/* Role summary */}

@@ -73,8 +73,12 @@ export default function ArtistPage({ params }: { params: Promise<{ id: string }>
                         <div className="bg-[#0d0d0d] border-2 border-[#2a2a30] p-6 flex flex-col gap-4" style={{ boxShadow: `6px 6px 0 0 ${accent}` }}>
                             {/* Avatar */}
                             <div className="flex items-center gap-3">
-                                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#ff2d95] to-[#a855f7] flex items-center justify-center text-xl font-black text-white shrink-0">
-                                    {artist.name[0]}
+                                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#ff2d95] to-[#a855f7] flex items-center justify-center text-xl font-black text-white shrink-0 overflow-hidden">
+                                    {user?.avatar_url ? (
+                                        <img src={user.avatar_url} alt={artist.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        artist.name[0]?.toUpperCase()
+                                    )}
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-1.5">
@@ -136,13 +140,23 @@ export default function ArtistPage({ params }: { params: Promise<{ id: string }>
                             </div>
 
                             {/* CTA */}
-                            <button
-                                disabled={!artist.available}
-                                className="w-full mt-2 py-3 font-extrabold uppercase tracking-wider text-sm border-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                                style={{ borderColor: accent, background: `${accent}22`, color: "white", boxShadow: artist.available ? `4px 4px 0 0 ${accent}` : "none" }}
-                            >
-                                {artist.available ? "Send Project Brief" : "Currently Unavailable"}
-                            </button>
+                            {artist.available ? (
+                                <Link
+                                    href={`/messages?to=${artist.handle}`}
+                                    className="w-full mt-2 py-3 font-extrabold uppercase tracking-wider text-sm border-2 transition-all block text-center hover:opacity-90"
+                                    style={{ borderColor: accent, background: `${accent}22`, color: "white", boxShadow: `4px 4px 0 0 ${accent}` }}
+                                >
+                                    Send Project Brief
+                                </Link>
+                            ) : (
+                                <button
+                                    disabled
+                                    className="w-full mt-2 py-3 font-extrabold uppercase tracking-wider text-sm border-2 transition-all opacity-30 cursor-not-allowed"
+                                    style={{ borderColor: accent, background: `${accent}22`, color: "white" }}
+                                >
+                                    Currently Unavailable
+                                </button>
+                            )}
                         </div>
                     </div>
 

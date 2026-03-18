@@ -35,6 +35,7 @@ export interface UserProfile {
   isAvailableForFreelance: boolean
   hourlyRate: number     // e.g. 0.002
   hourlyRateCurrency: string // "sBTC" | "STX"
+  specialization_id: number[]
 }
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -61,6 +62,7 @@ const DEFAULT_PROFILE: UserProfile = {
   isAvailableForFreelance: true,
   hourlyRate: 0.002,
   hourlyRateCurrency: "sBTC",
+  specialization_id: [],
 }
 
 interface WalletState {
@@ -138,6 +140,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           isAvailableForFreelance: user.is_available_for_freelance ?? profile.isAvailableForFreelance ?? true,
           hourlyRate: (user.hourly_rate ? Number(user.hourly_rate) : null) ?? profile.hourlyRate ?? 0.002,
           hourlyRateCurrency: user.hourly_rate_currency ?? profile.hourlyRateCurrency ?? "sBTC",
+          specialization_id: user.specialization_id ?? profile.specialization_id ?? [],
         }
         localStorage.setItem(PROFILE_KEY, JSON.stringify(merged))
         setWallet(w => ({
@@ -172,6 +175,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         isAvailableForFreelance: user.is_available_for_freelance ?? localProfile.isAvailableForFreelance ?? true,
         hourlyRate: (user.hourly_rate ? Number(user.hourly_rate) : null) ?? localProfile.hourlyRate ?? 0.002,
         hourlyRateCurrency: user.hourly_rate_currency ?? localProfile.hourlyRateCurrency ?? "sBTC",
+        specialization_id: user.specialization_id ?? localProfile.specialization_id ?? [],
       }
       localStorage.setItem(PROFILE_KEY, JSON.stringify(merged))
       setWallet({
@@ -234,6 +238,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         is_available_for_freelance: profile.isAvailableForFreelance,
         hourly_rate: profile.hourlyRate,
         hourly_rate_currency: profile.hourlyRateCurrency,
+        specialization_id: profile.specialization_id,
       })
     } catch {
       // Non-blocking — local state is already updated

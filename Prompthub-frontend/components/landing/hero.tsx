@@ -122,9 +122,9 @@ export function Hero() {
         {/* Stats / Nodes readout */}
         <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 border border-white/10 bg-black/40 backdrop-blur-sm shadow-[8px_8px_0_0_rgba(255,255,255,0.05)]">
           {[
-            { label: "Active Nodes", value: "1,204", icon: Globe, color: "text-primary" },
-            { label: "Artifacts Indexed", value: "8,492", icon: Database, color: "text-secondary" },
-            { label: "Network Volume", value: "45.2 sBTC", icon: Hexagon, color: "text-accent" },
+            { label: "Active Creators", value: "1,204", icon: Globe, color: "text-primary" },
+            { label: "Listed Prompts", value: "8,492", icon: Database, color: "text-secondary" },
+            { label: "Total Volume", value: "45.2 sBTC", icon: Hexagon, color: "text-accent" },
           ].map((stat, i) => (
             <div key={stat.label} className={`p-6 flex items-start gap-4 ${i !== 2 ? 'border-b md:border-b-0 md:border-r border-white/10' : ''} group hover:bg-white/5 transition-colors`}>
               <div className={`p-3 border border-white/10 ${stat.color} group-hover:border-current transition-colors`}>

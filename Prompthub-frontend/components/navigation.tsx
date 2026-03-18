@@ -117,8 +117,14 @@ export function Navigation() {
                   )}
                 >
                   {/* Avatar bubble */}
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#a855f7] to-[#00ffff] flex items-center justify-center text-sm font-black text-white shrink-0 shadow-inner">
-                    {profile.name ? profile.name[0].toUpperCase() : <User className="w-4 h-4" strokeWidth={2.5} />}
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#a855f7] to-[#00ffff] flex items-center justify-center text-sm font-black text-white shrink-0 overflow-hidden shadow-inner">
+                    {profile.avatarUrl ? (
+                      <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" />
+                    ) : profile.name ? (
+                      profile.name[0].toUpperCase()
+                    ) : (
+                      <User className="w-4 h-4" strokeWidth={2.5} />
+                    )}
                   </div>
                   <div className="flex flex-col items-start pr-1">
                     <span className="text-sm font-bold text-white leading-none">

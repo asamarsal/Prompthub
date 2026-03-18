@@ -43,9 +43,10 @@ class AuthController extends Controller
             'is_available_for_freelance' => 'boolean',
             'hourly_rate' => 'numeric|min:0.0001|max:1000',
             'hourly_rate_currency' => 'nullable|string|in:sBTC,STX',
+            'specialization_id' => 'nullable|array',
         ]);
         
-        $user->update($request->only(['username', 'name', 'bio', 'avatar_url', 'cover_url', 'roles', 'is_available_for_freelance', 'hourly_rate', 'hourly_rate_currency']));
+        $user->update($request->only(['username', 'name', 'bio', 'avatar_url', 'cover_url', 'roles', 'is_available_for_freelance', 'hourly_rate', 'hourly_rate_currency', 'specialization_id']));
         return response()->json($user);
     }
 }

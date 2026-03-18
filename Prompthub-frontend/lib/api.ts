@@ -32,7 +32,8 @@ export async function fetchStacksPrice(): Promise<number> {
         console.warn("CoinGecko response missing blockstack.usd, using fallback.")
         return 2.5
     } catch (err) {
-        console.error("Failed to fetch STX price:", err)
+        // Suppress console.error so it doesn't trigger the Next.js dev error overlay
+        console.warn("CoinGecko API blocked or offline. Using fallback STX price: $2.5")
         return 2.5 // Fallback
     }
 }
@@ -192,6 +193,7 @@ export interface ApiUser {
     is_available_for_freelance?: boolean
     hourly_rate?: number
     hourly_rate_currency?: string
+    specialization_id?: number[]
 }
 
 export interface LoginResponse {
@@ -258,6 +260,7 @@ export async function updateProfile(data: {
     is_available_for_freelance?: boolean
     hourly_rate?: number
     hourly_rate_currency?: string
+    specialization_id?: number[]
 }): Promise<ApiUser> {
     return request<ApiUser>("/api/users/me", {
         method: "PUT",

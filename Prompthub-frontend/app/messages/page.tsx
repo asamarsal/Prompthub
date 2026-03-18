@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { fetchConversations, fetchMessages, searchUsers, sendMessage, fetchConnections, sendFriendRequest, acceptFriendRequest, removeFriendConnection } from "@/lib/api";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { fetchConversations, fetchMessages, searchUsers, sendMessage, fetchConnections, sendFriendRequest, acceptFriendRequest, removeFriendConnection, fetchUserByAddress } from "@/lib/api";
 import { getEcho } from "@/lib/echo";
 import { useWallet } from "@/lib/wallet-context";
 import { Search, Send, User, Check, Clock, UserPlus, MessageSquare, Image as ImageIcon, X } from "lucide-react";
@@ -9,6 +10,16 @@ import { cn } from "@/lib/utils";
 import { Navigation } from "@/components/navigation";
 
 export default function MessagesPage() {
+    return (
+        <Suspense fallback={<div className="pt-24 min-h-screen bg-[#0a0a0c] flex items-center justify-center text-white/20">Loading messages...</div>}>
+            <MessagesContent />
+        </Suspense>
+    );
+}
+
+function MessagesContent() {
+    const searchParams = useSearchParams();
+    const toParam = searchParams.get("to");
     const { address, isConnected } = useWallet();
     const [conversations, setConversations] = useState<any[]>([]);
     const [connections, setConnections] = useState<any[]>([]);
@@ -35,6 +46,32 @@ export default function MessagesPage() {
             fetchConnections().then(setConnections);
         }
     }, [isConnected, address]);
+
+    // Handle Deep Linking (?to=...)
+    useEffect(() => {
+        if (!toParam || !isConnected || !address) return;
+
+        // Try to handle direct address or username
+        const handleDeepLink = async () => {
+            // 1. Is it a Stacks address?
+            if (toParam.startsWith('S') && toParam.length > 30) {
+                try {
+                    const user = await fetchUserByAddress(toParam);
+                    if (user) setSelectedUser(user);
+                } catch { }
+            } else {
+                // 2. Probably a username
+                try {
+                    const results = await searchUsers(toParam);
+                    const exact = results.find(u => u.username?.toLowerCase() === toParam.toLowerCase());
+                    if (exact) setSelectedUser(exact);
+                    else if (results.length > 0) setSelectedUser(results[0]);
+                } catch { }
+            }
+        };
+
+        handleDeepLink();
+    }, [toParam, isConnected, address]);
 
     // Load messages when selecting user
     useEffect(() => {

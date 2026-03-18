@@ -123,8 +123,12 @@ export default function HirePage() {
                                 <div className="p-5 flex flex-col gap-3">
                                     {/* Name + verified */}
                                     <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff2d95] to-[#a855f7] flex items-center justify-center text-xs font-bold text-white shrink-0">
-                                            {artist.name[0]}
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff2d95] to-[#a855f7] flex items-center justify-center text-xs font-bold text-white shrink-0 overflow-hidden">
+                                            {artist.avatar ? (
+                                                <img src={artist.avatar} alt={artist.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                artist.name[0]?.toUpperCase()
+                                            )}
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-1.5">
