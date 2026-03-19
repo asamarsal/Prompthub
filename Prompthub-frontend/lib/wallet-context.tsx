@@ -113,8 +113,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   function loadProfile(): UserProfile {
     try {
       const raw = localStorage.getItem(PROFILE_KEY)
-      if (raw) return { ...DEFAULT_PROFILE, ...JSON.parse(raw) }
-    } catch { }
+      if (raw && raw.trim().startsWith("{")) {
+        const parsed = JSON.parse(raw)
+        return { ...DEFAULT_PROFILE, ...parsed }
+      }
+    } catch (e) {
+      console.warn("Failed to parse local profile, resetting to default.", e)
+    }
     return DEFAULT_PROFILE
   }
 

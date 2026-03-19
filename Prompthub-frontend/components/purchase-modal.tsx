@@ -171,8 +171,12 @@ export function PurchaseModal({
   }
 
   const handleClose = () => {
-    setState("confirm")
-    onClose()
+    if (state === "success") {
+      window.location.reload()
+    } else {
+      setState("confirm")
+      onClose()
+    }
   }
 
   return (

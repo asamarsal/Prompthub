@@ -588,6 +588,7 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                                                         <th className="pb-3 font-semibold">Buyer</th>
                                                         <th className="pb-3 font-semibold">Price</th>
                                                         <th className="pb-3 font-semibold">Date</th>
+                                                        <th className="pb-3 font-semibold text-right">TxID</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -600,6 +601,19 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                                                             <td className="py-3 text-[#a78bfa]/50 flex items-center gap-1 font-mono">
                                                                 <Clock className="w-3 h-3" />
                                                                 {new Date(tx.created_at).toLocaleString()}
+                                                            </td>
+                                                            <td className="py-3 text-right">
+                                                                {tx.tx_id && (
+                                                                    <a
+                                                                        href={`https://explorer.hiro.so/txid/${tx.tx_id}?chain=testnet`}
+                                                                        target="_blank"
+                                                                        rel="noreferrer"
+                                                                        className="text-[#ff2d95] hover:text-[#00ffff] transition-colors"
+                                                                        title="View on Stacks Explorer"
+                                                                    >
+                                                                        <ExternalLink className="w-3.5 h-3.5 ml-auto" />
+                                                                    </a>
+                                                                )}
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -674,7 +688,7 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                                     onClick={() => setPurchaseOpen(true)}
                                     disabled={!!premiumContent || !prompt.contract_id || prompt.contract_id === 0}
                                     className={cn(
-                                        "w-full py-4 text-base font-extrabold uppercase mb-3 transition-all border-2",
+                                        "w-full py-4 text-base font-extrabold uppercase mb-1 transition-all border-2",
                                         premiumContent
                                             ? "bg-[#b4ff39]/10 border-[#b4ff39] text-[#b4ff39] cursor-default"
                                             : (!prompt.contract_id || prompt.contract_id === 0)
@@ -684,6 +698,24 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                                 >
                                     {premiumContent ? "Already Purchased" : (!prompt.contract_id || prompt.contract_id === 0) ? "Not Listed On-Chain" : "Buy Now"}
                                 </button>
+
+                                {/* Explorer link for the purchase */}
+                                {premiumContent && (
+                                    <div className="mb-4 text-center">
+                                        {transactions.find(t => t.buyer_address === address) ? (
+                                            <a
+                                                href={`https://explorer.hiro.so/txid/${transactions.find(t => t.buyer_address === address)?.tx_id}?chain=testnet`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-[10px] font-bold text-[#b4ff39] hover:text-[#00ffff] uppercase tracking-widest flex items-center justify-center gap-1 transition-all"
+                                            >
+                                                View Proof of Purchase <ExternalLink className="w-2.5 h-2.5" />
+                                            </a>
+                                        ) : (
+                                            <span className="text-[10px] font-bold text-[#a78bfa]/40 uppercase tracking-widest">Ownership Verified via API</span>
+                                        )}
+                                    </div>
+                                )}
 
                                 <button
                                     onClick={handleToggleBookmark}

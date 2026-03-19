@@ -45,7 +45,25 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${outfit.variable} ${oxanium.variable} font-sans antialiased overflow-x-hidden`}>
+      <head>
+        {/* Fix for Wallet Extensions (Leather/Hiro) conflict with setImmediate polyfills */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined' && !window.setImmediate) {
+                window.setImmediate = function(fn) {
+                  var args = Array.prototype.slice.call(arguments, 1);
+                  return setTimeout(function() {
+                    fn.apply(null, args);
+                  }, 0);
+                };
+                window.clearImmediate = clearTimeout;
+              }
+            `,
+          }}
+        />
+      </head>
+      <body className={`${outfit.variable} ${oxanium.variable} font-sans antialiased overflow-x-hidden`} suppressHydrationWarning>
         <WalletProvider>
           {children}
         </WalletProvider>
