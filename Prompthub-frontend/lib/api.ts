@@ -405,14 +405,29 @@ export async function fetchPurchasedPrompts(): Promise<any> {
     return request<any>("/api/users/me/purchased");
 }
 
-/**
- * POST /api/prompts
- * Creates a new prompt.
- */
 export async function createPrompt(data: any): Promise<any> {
     return request<any>("/api/prompts", {
         method: "POST",
         body: JSON.stringify(data),
+    });
+}
+
+/**
+ * POST /api/prompts/{id}/deactivate
+ */
+export async function deactivatePrompt(id: string | number): Promise<any> {
+    return request<any>(`/api/prompts/${id}/deactivate`, {
+        method: "POST"
+    });
+}
+
+/**
+ * PUT /api/prompts/{id}/price
+ */
+export async function updatePromptPrice(id: string | number, data: { price_sbtc: number, currency: string }): Promise<any> {
+    return request<any>(`/api/prompts/${id}/price`, {
+        method: "PUT",
+        body: JSON.stringify(data)
     });
 }
 

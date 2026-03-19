@@ -58,6 +58,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/prompts/{id}/reviews', [ReviewController::class, 'store']);
     Route::post('/prompts/{id}/verify-purchase', [PromptController::class, 'verifyPurchase']);
     Route::put('/prompts/{id}/curate', [PromptController::class, 'curate']);
+    Route::post('/prompts/{id}/deactivate', [PromptController::class, 'deactivate']);
+    Route::put('/prompts/{id}/price', [PromptController::class, 'updatePrice']);
     Route::get('/prompts/{id}/content', [PromptController::class, 'getContent'])->middleware('x402');
 
     // Contests

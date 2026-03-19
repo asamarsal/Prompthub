@@ -276,4 +276,41 @@ class PromptController extends Controller
             'original_content' => $prompt->original_content ?? 'This is the premium prompt content protected by purchase verification.'
         ]);
     }
+
+    public function deactivate($id, Request $request)
+    {
+        $prompt = Prompt::findOrFail($id);
+        
+        if ($request->user()->id !== $prompt->user_id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $prompt->update(['is_published' => false]);
+        
+        return response()->json(['message' => 'Prompt delisted successfully.']);
+    }
+
+    public function updatePrice($id, Request $request)
+    {
+        $prompt = Prompt::findOrFail($id);
+        
+        if ($request->user()->id !== $prompt->user_id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'price_sbtc' => 'required|numeric|min:0',
+            'currency' => 'required|string|max:10'
+        ]);
+
+        $prompt->update([
+            'price_sbtc' => $validated['price_sbtc'],
+            'currency' => $validated['currency']
+        ]);
+        
+        return response()->json([
+            'message' => 'Price updated successfully.',
+            'prompt' => $prompt
+        ]);
+    }
 }

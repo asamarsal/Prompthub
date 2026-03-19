@@ -73,8 +73,9 @@ export function PurchaseModal({
     setState("processing")
 
     try {
-      // 1. Convert to microSTX for STX or correct decimals for sBTC
-      const amountInMicro = Math.round(total * 1000000)
+      // 1. Convert to microSTX for STX (6 decimals) or sBTC (8 decimals)
+      const multiplier = currency === "sBTC" ? 100000000 : 1000000
+      const amountInMicro = Math.round(total * multiplier)
 
       // 2. Define Post-Conditions (Safe Transfer)
       const postConditions = []
@@ -179,11 +180,12 @@ export function PurchaseModal({
         {state === "success" || state === "reviewing" ? (
           <div className="flex flex-col items-center gap-4 p-8">
             <div className="w-16 h-16 border-2 border-[#b4ff39] flex items-center justify-center bg-[#b4ff39]/10 shadow-[4px_4px_0_0_#b4ff39]">
-              <Check className="w-8 h-8 text-[#b4ff39]" />
+              <Loader2 className="w-8 h-8 text-[#b4ff39] animate-spin" />
             </div>
-            <h3 className="text-xl font-extrabold text-[#e0d4ff] uppercase tracking-wider mt-2">Purchase Complete</h3>
+            <h3 className="text-xl font-extrabold text-[#e0d4ff] uppercase tracking-wider mt-2">Transaction Broadcasted</h3>
             <p className="text-sm text-[#a78bfa] text-center font-medium">
-              You now own &quot;{prompt.title}&quot;. Your purchase is recorded on-chain.
+              Your purchase for &quot;{prompt.title}&quot; has been sent to the Stacks network.
+              It may take a few minutes to confirm and unlock the content.
             </p>
             {txId && (
               <p className="text-xs text-[#b4ff39] font-mono mt-2 p-2 border border-[#b4ff39]/30 bg-[#b4ff39]/5">

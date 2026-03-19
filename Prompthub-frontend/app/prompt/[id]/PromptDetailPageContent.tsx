@@ -7,12 +7,14 @@ import { PromptCard } from "@/components/prompt-card"
 import { PurchaseModal } from "@/components/purchase-modal"
 import { prompts as mockPrompts } from "@/lib/mock-data"
 import { ChevronRight, Check, Copy, Heart, Share2, Star, ExternalLink, Zap, Lock, BadgeCheck, Clock, Unlock, Loader2 } from "lucide-react"
-import { getPrompt, toggleBookmark, fetchPremiumContent } from "@/lib/api"
-import { useWallet } from "@/lib/wallet-context"
-import { useStacksPrice } from "@/lib/hooks/use-stacks-price"
-import { openSTXTransfer } from "@stacks/connect"
+import { openSTXTransfer, openContractCall } from "@stacks/connect"
+import { uintCV, stringAsciiCV, contractPrincipalCV } from "@stacks/transactions"
+import { STACKS_TESTNET, STACKS_MOCKNET } from "@stacks/network"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { getPrompt, toggleBookmark, fetchPremiumContent, deactivatePrompt, updatePromptPrice } from "@/lib/api"
+import { useWallet } from "@/lib/wallet-context"
+import { useStacksPrice } from "@/lib/hooks/use-stacks-price"
 
 const mockReviews = [
     { id: 1, user: "0xab12...cd34", userName: "CryptoCreator", rating: 5, comment: "Incredible results! The prompts generated stunning portraits every time.", date: "2026-02-25", verified: true },
@@ -51,6 +53,9 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
 
     const [premiumContent, setPremiumContent] = useState<string | null>(null)
     const [unlockLoading, setUnlockLoading] = useState(false)
+    const [isActionLoading, setIsActionLoading] = useState(false)
+
+    const isOwner = isConnected && address === prompt?.creator
 
     useEffect(() => {
         async function fetchDetails() {
@@ -566,6 +571,87 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                                     <Heart className={cn("w-4 h-4", isBookmarked && "fill-[#ff2d95] text-[#ff2d95]")} />
                                     {isBookmarked ? "Saved" : "Save"}
                                 </button>
+
+                                {isOwner && (
+                                    <div className="mt-4 pt-4 border-t border-[#2a2a30]">
+                                        <p className="text-[10px] font-display font-black text-[#ff2d95] uppercase tracking-widest mb-3">Creator Management</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                onClick={async () => {
+                                                    const newPrice = prompt?.price + 0.001 // Simple increment for test
+                                                    if (!confirm(`Update price to ${newPrice} STX?`)) return
+
+                                                    setIsActionLoading(true)
+                                                    try {
+                                                        const network = process.env.NEXT_PUBLIC_STACKS_NETWORK === 'mocknet' ? STACKS_MOCKNET : STACKS_TESTNET
+                                                        const contractStr = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || 'ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT.prompthub-marketplace'
+                                                        const [contractAddress, contractName] = contractStr.split('.')
+
+                                                        await openContractCall({
+                                                            network,
+                                                            contractAddress,
+                                                            contractName,
+                                                            functionName: 'update-price',
+                                                            functionArgs: [
+                                                                uintCV(prompt.contract_id),
+                                                                uintCV(Math.round(newPrice * (prompt.currency === "sBTC" ? 100000000 : 1000000))),
+                                                                stringAsciiCV(prompt.currency || "STX")
+                                                            ],
+                                                            onFinish: async (data) => {
+                                                                await updatePromptPrice(prompt.id, { price_sbtc: newPrice, currency: prompt.currency || "STX" })
+                                                                toast.success("Price update broadcasted!")
+                                                                setPrompt((prev: any) => ({ ...prev, price: newPrice }))
+                                                            }
+                                                        })
+                                                    } catch (e) {
+                                                        console.error(e)
+                                                        toast.error("Failed to update price")
+                                                    } finally {
+                                                        setIsActionLoading(false)
+                                                    }
+                                                }}
+                                                disabled={isActionLoading}
+                                                className="bg-[#160f24] border border-[#2a2a30] py-2 text-[10px] font-bold text-[#e0d4ff] hover:border-[#00ffff] transition-all uppercase"
+                                            >
+                                                Update Price
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    if (!confirm("Are you sure you want to delist this prompt? This will return the NFT to your wallet.")) return
+
+                                                    setIsActionLoading(true)
+                                                    try {
+                                                        const network = process.env.NEXT_PUBLIC_STACKS_NETWORK === 'mocknet' ? STACKS_MOCKNET : STACKS_TESTNET
+                                                        const contractStr = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || 'ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT.prompthub-marketplace'
+                                                        const [contractAddress, contractName] = contractStr.split('.')
+
+                                                        await openContractCall({
+                                                            network,
+                                                            contractAddress,
+                                                            contractName,
+                                                            functionName: 'delist-prompt',
+                                                            functionArgs: [uintCV(prompt.contract_id)],
+                                                            onFinish: async (data) => {
+                                                                await deactivatePrompt(prompt.id)
+                                                                toast.success("Delist broadcasted!")
+                                                                setPrompt((prev: any) => ({ ...prev, contract_id: 0 }))
+                                                            }
+                                                        })
+                                                    } catch (e) {
+                                                        console.error(e)
+                                                        toast.error("Failed to delist")
+                                                    } finally {
+                                                        setIsActionLoading(false)
+                                                    }
+                                                }}
+                                                disabled={isActionLoading}
+                                                className="bg-[#160f24] border border-[#2a2a30] py-2 text-[10px] font-bold text-[#e0d4ff] hover:border-red-500 transition-all uppercase"
+                                            >
+                                                Delist
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="mt-6 pt-6 border-t border-[#2a2a30] flex flex-col gap-3">
                                     {prompt.txId && (
