@@ -126,21 +126,32 @@ export default function CreatePageContent() {
 
     try {
       setDeploying(true)
+      const groupId = crypto.randomUUID().split("-")[0] // Short unique ID
 
       // 0. Upload Preview Image if in upload mode
       let finalPreviewUrl = form.previewImageUrl
       if (form.previewMode === "upload" && form.previewImageFile) {
-        console.log("Uploading preview image to local storage...")
-        const previewRes = await uploadPromptAsset(form.previewImageFile)
+        console.log("Uploading preview image to local storage folder:", groupId)
+        const previewRes = await uploadPromptAsset(form.previewImageFile, groupId)
         finalPreviewUrl = previewRes.url
         console.log("Preview image uploaded to local, URL:", finalPreviewUrl)
       }
 
       // 1. Upload the real Prompt Content to local storage
-      console.log("Uploading prompt file to local storage...", form.file.name)
-      const uploadRes = await uploadPromptAsset(form.file)
+      console.log("Uploading prompt file to local storage folder:", groupId)
+      const uploadRes = await uploadPromptAsset(form.file, groupId)
       const promptUrl = uploadRes.url
       console.log("File uploaded to local, URL:", promptUrl)
+
+      // Extract file text if it's a text/code prompt to save in DB for quick access
+      let originalContent = ""
+      if (form.contentType === "TEXT" || form.contentType === "CODE") {
+        try {
+          originalContent = await form.file.text()
+        } catch (e) {
+          console.error("Failed to read file text", e)
+        }
+      }
 
       // 2. Upload NFT Metadata to IPFS
       const metadataRes = await uploadMetadata({
@@ -200,7 +211,8 @@ export default function CreatePageContent() {
             royalty_percentage: form.royalty,
             stacks_tx_id: data.txId, // Store the TX ID for verification
             currency: form.currency,
-            additional_info: form.additionalLinks.filter(l => l.url.trim() !== "")
+            additional_info: form.additionalLinks.filter(l => l.url.trim() !== ""),
+            original_content: originalContent
           })
           setDeployedTxId(data.txId)
           setDeployedMetadataCID(metadataCID)

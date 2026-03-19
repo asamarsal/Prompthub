@@ -37,7 +37,7 @@ function CopyBtn({ text }: { text: string }) {
     )
 }
 
-type Tab = "overview" | "portfolio" | "prompts" | "reviews" | "contests" | "collections"
+type Tab = "overview" | "portfolio" | "prompts" | "reviews" | "contests" | "collections" | "purchased"
 
 function ProfileContent({ params }: { params: { address: string } }) {
     const { address: paramAddress } = params
@@ -79,13 +79,15 @@ function ProfileContent({ params }: { params: { address: string } }) {
     const [activeTab, setActiveTab] = useState<Tab>("overview")
     const [savedPrompts, setSavedPrompts] = useState<any[]>([])
     const [savedLoading, setSavedLoading] = useState(false)
+    const [purchasedPrompts, setPurchasedPrompts] = useState<any[]>([])
+    const [purchasedLoading, setPurchasedLoading] = useState(false)
 
     // Handle tab from URL
     const searchParams = useSearchParams()
     const tabParam = searchParams.get("tab")
 
     useEffect(() => {
-        if (tabParam && ["overview", "portfolio", "prompts", "reviews", "contests", "collections"].includes(tabParam)) {
+        if (tabParam && ["overview", "portfolio", "prompts", "reviews", "contests", "collections", "purchased"].includes(tabParam)) {
             setActiveTab(tabParam as Tab)
         }
     }, [tabParam])
@@ -163,6 +165,38 @@ function ProfileContent({ params }: { params: { address: string } }) {
         }
     }, [activeTab, isOwn, isConnected])
 
+    // Fetch purchased prompts when entering "purchased" tab
+    useEffect(() => {
+        if (activeTab === "purchased" && isOwn && isConnected) {
+            setPurchasedLoading(true)
+            import("@/lib/api").then(api => api.fetchPurchasedPrompts())
+                .then(data => {
+                    const mapped = (data.results?.data || data.data || []).map((p: any) => ({
+                        id: p.id,
+                        title: p.title,
+                        description: p.description,
+                        price: parseFloat(p.price_sbtc),
+                        image: p.preview_image_url || 'https://images.unsplash.com/photo-1614729939124-032f0b5609ce?w=800&q=80',
+                        model: p.ai_model,
+                        category: p.category,
+                        tags: p.tags || [],
+                        creatorName: p.user?.name || (p.user?.stx_address ? `${p.user.stx_address.slice(0, 4)}...${p.user.stx_address.slice(-4)}` : "Artist"),
+                        creator: p.user?.stx_address || "0xUNKNOWN",
+                        sales: p.total_sold,
+                        rating: 4.5,
+                        isCurated: p.is_curated,
+                        isNsfw: p.is_nsfw,
+                        isBookmarked: false,
+                        license: p.license_type,
+                        createdAt: p.created_at
+                    }))
+                    setPurchasedPrompts(mapped)
+                })
+                .catch(err => console.error(err))
+                .finally(() => setPurchasedLoading(false))
+        }
+    }, [activeTab, isOwn, isConnected])
+
     // Use own profile data if own page, else empty data (no more Yuki fallback)
     const displayProfile = isOwn ? profile : (fetchedProfile || {
         id: 0,
@@ -231,6 +265,7 @@ function ProfileContent({ params }: { params: { address: string } }) {
         ...(displayProfile.roles.includes("artist") ? [{ id: "portfolio" as Tab, label: "Portfolio" }] : []),
         { id: "prompts", label: "Prompts" },
         ...(isOwn ? [{ id: "collections" as Tab, label: "Collections" }] : []),
+        ...(isOwn ? [{ id: "purchased" as Tab, label: "Purchased" }] : []),
         ...(displayProfile.roles.includes("brand") ? [{ id: "contests" as Tab, label: "Contests" }] : []),
         { id: "reviews", label: "Reviews" },
     ]
@@ -550,6 +585,39 @@ function ProfileContent({ params }: { params: { address: string } }) {
                                     <Link
                                         href="/marketplace"
                                         className="inline-block mt-6 px-6 py-2 bg-white/5 border border-white/10 hover:border-[#ff2d95] hover:text-[#ff2d95] transition-all text-xs font-bold uppercase tracking-widest"
+                                    >
+                                        Browse Marketplace
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* PURCHASED */}
+                    {activeTab === "purchased" && (
+                        <div>
+                            {purchasedLoading ? (
+                                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="h-[420px] bg-white/[0.02] border border-[#2a2a30]" />
+                                    ))}
+                                </div>
+                            ) : purchasedPrompts.length > 0 ? (
+                                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {purchasedPrompts.map((p: any) => (
+                                        <PromptCard key={p.id} prompt={p} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-20 border-2 border-dashed border-[#2a2a30] bg-white/[0.01]">
+                                    <ShoppingBag className="w-10 h-10 mx-auto mb-4 text-white/20" />
+                                    <h3 className="text-lg font-bold text-white uppercase tracking-wider">No purchased prompts</h3>
+                                    <p className="text-white/40 text-sm mt-2 max-w-xs mx-auto">
+                                        You haven't bought any prompts yet. Visit the marketplace to find amazing creations.
+                                    </p>
+                                    <Link
+                                        href="/marketplace"
+                                        className="inline-block mt-6 px-6 py-2 bg-white/5 border border-white/10 hover:border-[#00ffff] hover:text-[#00ffff] transition-all text-xs font-bold uppercase tracking-widest"
                                     >
                                         Browse Marketplace
                                     </Link>

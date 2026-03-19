@@ -31,6 +31,11 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
     const { id } = params
     const [prompt, setPrompt] = useState<any>(null)
     const [pageLoading, setPageLoading] = useState(true)
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     const { isConnected, address } = useWallet()
 
@@ -108,6 +113,31 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                 .finally(() => setTxLoading(false))
         }
     }, [activeTab, id])
+
+    // Automatic check for purchased content on mount
+    useEffect(() => {
+        if (mounted && isConnected && address && prompt && !premiumContent && !unlockLoading) {
+            const checkPurchase = async () => {
+                try {
+                    // Try to fetch premium content optimistically
+                    // We generate a dummy account object for the x402-stacks adapter
+                    // if it fails with 402, it means not purchased, so we just stop quietly.
+                    const account = {
+                        address: address,
+                        signTransaction: async () => { throw new Error("Automatic check - skip wallet") }
+                    }
+                    const res = await fetchPremiumContent(prompt.id, account)
+                    if (res && res.original_content) {
+                        setPremiumContent(res.original_content)
+                    }
+                } catch (err) {
+                    // Silent fail for automatic check
+                    console.log("Auto-unlock check: Content is still locked/not purchased.")
+                }
+            }
+            checkPurchase()
+        }
+    }, [mounted, isConnected, address, prompt?.id])
 
     const handleToggleBookmark = async () => {
         if (bookmarkLoading || !prompt) return
@@ -250,8 +280,17 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
 
                             <div className="absolute inset-0 bg-gradient-to-br from-[#ff2d95]/15 via-[#a855f7]/10 to-[#00ffff]/15 flex items-center justify-center">
                                 <div className="text-center relative z-10">
-                                    <Lock className="w-12 h-12 text-[#a78bfa] mx-auto mb-3" />
-                                    <p className="text-sm text-[#a78bfa] font-bold">Preview - Purchase to unlock</p>
+                                    {premiumContent ? (
+                                        <>
+                                            <Unlock className="w-12 h-12 text-[#b4ff39] mx-auto mb-3" />
+                                            <p className="text-sm text-[#b4ff39] font-bold uppercase tracking-widest">Purchased - Content Unlocked</p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Lock className="w-12 h-12 text-[#a78bfa] mx-auto mb-3" />
+                                            <p className="text-sm text-[#a78bfa] font-bold">Preview - Purchase to unlock</p>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                             <div className="absolute inset-0 y2k-grid-bg opacity-30" aria-hidden="true" />
@@ -320,25 +359,31 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                                                     <div className="w-16 h-16 bg-[#ff2d95]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#ff2d95]/20 group-hover:scale-110 transition-transform">
                                                         <Lock className="w-8 h-8 text-[#ff2d95]" />
                                                     </div>
-                                                    <h4 className="text-lg font-black text-white uppercase tracking-tighter mb-2">Premium Prompt Content</h4>
+                                                    <h4 className="text-lg font-black text-white uppercase tracking-tighter mb-2">
+                                                        {premiumContent ? "Prompt Logic Unlocked" : "Premium Prompt Content"}
+                                                    </h4>
                                                     <p className="text-sm text-[#a78bfa]/70 mb-8 max-w-sm mx-auto leading-relaxed">
-                                                        Unlock the precise prompt string, seed values, and negative parameters using the <span className="text-[#ff2d95] font-bold">x402 protocol</span>.
+                                                        {premiumContent
+                                                            ? "You have full access to the precise prompt string, seed values, and parameters."
+                                                            : "Unlock the precise prompt string, seed values, and negative parameters using the x402 protocol."}
                                                     </p>
-                                                    <button
-                                                        onClick={handleUnlock}
-                                                        disabled={unlockLoading || !isConnected}
-                                                        className="bg-transparent border-2 border-[#ff2d95] text-[#ff2d95] px-8 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all hover:bg-[#ff2d95] hover:text-white hover:shadow-[0_0_20px_0_rgba(255,45,149,0.3)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#ff2d95] disabled:hover:shadow-none"
-                                                    >
-                                                        {unlockLoading ? (
-                                                            <span className="flex items-center gap-2">
-                                                                <Zap className="w-4 h-4 animate-spin" /> Verifying Payment...
-                                                            </span>
-                                                        ) : isConnected ? (
-                                                            `Unlock for ${prompt.price} STX (x402)`
-                                                        ) : (
-                                                            "Connect Wallet to Access"
-                                                        )}
-                                                    </button>
+                                                    {!premiumContent && (
+                                                        <button
+                                                            onClick={handleUnlock}
+                                                            disabled={unlockLoading || !isConnected}
+                                                            className="bg-transparent border-2 border-[#ff2d95] text-[#ff2d95] px-8 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all hover:bg-[#ff2d95] hover:text-white hover:shadow-[0_0_20px_0_rgba(255,45,149,0.3)] disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#ff2d95] disabled:hover:shadow-none"
+                                                        >
+                                                            {unlockLoading ? (
+                                                                <span className="flex items-center gap-2">
+                                                                    <Zap className="w-4 h-4 animate-spin" /> Verifying Payment...
+                                                                </span>
+                                                            ) : isConnected ? (
+                                                                `Unlock for ${prompt.price} STX (x402)`
+                                                            ) : (
+                                                                "Connect Wallet to Access"
+                                                            )}
+                                                        </button>
+                                                    )}
                                                     <p className="mt-4 text-[10px] text-[#a78bfa]/40 font-mono uppercase tracking-widest">Powered by x402-stacks</p>
                                                 </div>
                                             ) : (
@@ -462,7 +507,12 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
 
                             <div className="bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] p-6">
                                 <div className="mb-6">
-                                    <p className="text-xs text-[#a78bfa] mb-1 font-mono uppercase">Current Price</p>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <p className="text-xs text-[#a78bfa] font-mono uppercase">Current Price</p>
+                                        {(!prompt.contract_id || prompt.contract_id === 0) && (
+                                            <span className="text-[10px] bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 font-black uppercase tracking-widest">Unlisted on Stacks</span>
+                                        )}
+                                    </div>
                                     <div className="flex items-baseline">
                                         <p className="text-4xl font-extrabold text-[#00ffff]">{typeof prompt.price === 'number' ? prompt.price : '0.000'}</p>
                                         <span className="text-xl font-display font-bold text-white uppercase ml-2">{prompt.currency || "STX"}</span>
@@ -495,9 +545,17 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
 
                                 <button
                                     onClick={() => setPurchaseOpen(true)}
-                                    className="w-full bg-[#00ffff] border-2 border-[#00ffff] text-black py-4 text-base font-extrabold uppercase mb-3 transition-all hover:bg-transparent hover:text-[#00ffff]"
+                                    disabled={!!premiumContent || !prompt.contract_id || prompt.contract_id === 0}
+                                    className={cn(
+                                        "w-full py-4 text-base font-extrabold uppercase mb-3 transition-all border-2",
+                                        premiumContent
+                                            ? "bg-[#b4ff39]/10 border-[#b4ff39] text-[#b4ff39] cursor-default"
+                                            : (!prompt.contract_id || prompt.contract_id === 0)
+                                                ? "bg-white/5 border-white/10 text-white/20 cursor-not-allowed opacity-50"
+                                                : "bg-[#00ffff] border-[#00ffff] text-black hover:bg-transparent hover:text-[#00ffff]"
+                                    )}
                                 >
-                                    Buy Now
+                                    {premiumContent ? "Already Purchased" : (!prompt.contract_id || prompt.contract_id === 0) ? "Not Listed On-Chain" : "Buy Now"}
                                 </button>
 
                                 <button

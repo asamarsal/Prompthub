@@ -336,6 +336,13 @@ export function PurchaseModal({
                 </span>
               </div>
 
+              {/* Unlisted Warning */}
+              {(!prompt.contract_id || prompt.contract_id === 0) && (
+                <div className="p-3 bg-red-900/20 border border-red-500/50 text-red-400 text-[11px] font-bold uppercase leading-tight">
+                  <p>Warning: This prompt is not listed on-chain (Seeded/Draft). Purchases will fail until it is properly published.</p>
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex gap-4 mt-4">
                 <button
@@ -346,10 +353,10 @@ export function PurchaseModal({
                 </button>
                 <button
                   onClick={handleConfirm}
-                  disabled={isSelfPurchase}
-                  className={`flex-1 px-4 py-3.5 text-sm font-extrabold shadow-[4px_4px_0_0_transparent] transition-all uppercase border-2 ${isSelfPurchase ? "opacity-30 cursor-not-allowed border-white/20 text-white/20" : "bg-[#ff2d95] border-[#ff2d95] text-white hover:shadow-[4px_4px_0_0_#fff] hover:-translate-y-1"}`}
+                  disabled={isSelfPurchase || !prompt.contract_id || prompt.contract_id === 0}
+                  className={`flex-1 px-4 py-3.5 text-sm font-extrabold shadow-[4px_4px_0_0_transparent] transition-all uppercase border-2 ${isSelfPurchase || !prompt.contract_id || prompt.contract_id === 0 ? "opacity-30 cursor-not-allowed border-white/20 text-white/20" : "bg-[#ff2d95] border-[#ff2d95] text-white hover:shadow-[4px_4px_0_0_#fff] hover:-translate-y-1"}`}
                 >
-                  {isSelfPurchase ? "Own Listing" : "Confirm Purchase"}
+                  {isSelfPurchase ? "Own Listing" : (!prompt.contract_id || prompt.contract_id === 0) ? "Unlisted" : "Confirm Purchase"}
                 </button>
               </div>
             </div>

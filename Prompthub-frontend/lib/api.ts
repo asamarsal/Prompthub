@@ -153,9 +153,12 @@ export async function uploadFile(file: File, type: "avatar" | "cover" | "prompt"
  * POST /api/prompts/upload-assets
  * Uploads a file to local backend storage.
  */
-export async function uploadPromptAsset(file: File): Promise<UploadResponse> {
+export async function uploadPromptAsset(file: File, groupId?: string): Promise<UploadResponse> {
     const formData = new FormData()
     formData.append("file", file)
+    if (groupId) {
+        formData.append("group_id", groupId)
+    }
 
     return request<UploadResponse>("/api/prompts/upload-assets", {
         method: "POST",
@@ -392,6 +395,14 @@ export async function recordTransaction(promptId: string, txId: string): Promise
  */
 export async function getPromptTransactions(id: string): Promise<any> {
     return request<any>(`/api/prompts/${id}/transactions`);
+}
+
+/**
+ * GET /api/users/me/purchased
+ * Fetches prompts purchased by the current user.
+ */
+export async function fetchPurchasedPrompts(): Promise<any> {
+    return request<any>("/api/users/me/purchased");
 }
 
 /**

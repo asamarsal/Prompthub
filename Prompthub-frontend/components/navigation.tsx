@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Menu, X, Search, LayoutDashboard, Plus, Wallet, Copy, Check, Palette, Trophy, User, Settings, ChevronDown, Bell, MessageSquare, Heart } from "lucide-react"
+import { Menu, X, Search, LayoutDashboard, Plus, Wallet, Copy, Check, Palette, Trophy, User, Settings, ChevronDown, Bell, MessageSquare, Heart, ShoppingBag } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useWallet, truncateAddress, ROLE_LABELS, ROLE_ICONS, type UserRole } from "@/lib/wallet-context"
 import { RoleOnboardingModal } from "@/components/role-onboarding-modal"
@@ -252,6 +252,16 @@ export function Navigation() {
                         className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
                       >
                         <Heart className="w-4 h-4 text-[#ff2d95]" /> Saved Collections
+                      </Link>
+                      <Link
+                        href={mounted && address ? `/profile/${address}?tab=purchased` : "#"}
+                        onClick={(e) => {
+                          if (!mounted || !address) e.preventDefault()
+                          setShowDropdown(false)
+                        }}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                      >
+                        <ShoppingBag className="w-4 h-4 text-[#00ffff]" /> Purchased Prompts
                       </Link>
                       <button
                         onClick={() => { setShowOnboarding(true); setShowDropdown(false) }}

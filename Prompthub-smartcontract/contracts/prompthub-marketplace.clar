@@ -75,8 +75,8 @@
     (royalty-percent uint)
   )
   (let ((prompt-id (+ (var-get last-prompt-id) u1)))
-    ;; Mint the SIP-009 NFT
-    (try! (nft-mint? prompt prompt-id tx-sender))
+    ;; Mint the SIP-009 NFT to the contract for escrow
+    (try! (as-contract (nft-mint? prompt prompt-id tx-sender)))
 
     ;; Save IPFS URI for Stacks Explorer
     (map-set prompt-metadata prompt-id ipfs-uri)
@@ -159,8 +159,10 @@
       )
     )
 
-    ;; Transfer the NFT ownership via SIP-009
-    (try! (nft-transfer? prompt prompt-id seller tx-sender))
+    (let ((buyer tx-sender))
+      ;; Transfer the NFT ownership from the contract (escrow) via SIP-009
+      (try! (as-contract (nft-transfer? prompt prompt-id tx-sender buyer)))
+    )
 
     ;; Update marketplace status to inactive (cannot be bought again unless re-listed)
     (map-set prompts prompt-id (merge prompt-data { is-active: false }))

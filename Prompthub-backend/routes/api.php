@@ -95,6 +95,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Bookmarks
     Route::get('/users/me/bookmarks', [BookmarkController::class, 'index']);
+    Route::get('/users/me/purchased', [PromptController::class, 'purchased']);
     Route::post('/prompts/{id}/bookmark', [BookmarkController::class, 'toggle']);
 });
 

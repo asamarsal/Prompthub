@@ -160,13 +160,19 @@ class FileController extends Controller
     {
         $request->validate([
             'file' => 'required|file|max:10240',
+            'group_id' => 'nullable|string|max:255',
         ]);
 
         $file = $request->file('file');
+        $groupId = $request->input('group_id');
         
         try {
-            // Store in storage/app/public/prompt
+            // Store in storage/app/public/prompt/{group_id} if provided
             $path = "prompt";
+            if ($groupId) {
+                $path .= "/" . $groupId;
+            }
+            
             $extension = $file->getClientOriginalExtension();
             $fileName = time() . '_' . uniqid() . '.' . $extension;
             
