@@ -87,7 +87,7 @@ export default function ContestDetailPage({ params }: { params: Promise<{ id: st
 
             await openContractCall({
                 network: STACKS_TESTNET,
-                contractAddress: "ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT",
+                contractAddress: "STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4",
                 contractName: "prompthub-contests",
                 functionName: "submit-entry",
                 functionArgs: [
@@ -126,14 +126,14 @@ export default function ContestDetailPage({ params }: { params: Promise<{ id: st
 
             await openContractCall({
                 network: STACKS_TESTNET,
-                contractAddress: "ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT",
+                contractAddress: "STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4",
                 contractName: "prompthub-contests",
                 functionName: "declare-winner",
                 functionArgs: [
                     uintCV(1), // contest-id
                     uintCV(1), // place (1st)
                     principalCV(sub.artist_address),
-                    contractPrincipalCV("ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT", "sbtc-token")
+                    contractPrincipalCV("STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4", "sbtc-token")
                 ],
                 onFinish: async () => {
                     await declareContestWinner(id, sub.id)

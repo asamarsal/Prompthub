@@ -70,7 +70,7 @@ export default function CreateContestPage() {
                     uintCV(tier5),
                     uintCV(100000), // mock future block height
                     stringAsciiCV(currency),
-                    contractPrincipalCV("ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT", "sbtc-token")
+                    contractPrincipalCV("STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4", "sbtc-token")
                 ],
                 postConditionMode: PostConditionMode.Allow,
                 onFinish: async (data) => {

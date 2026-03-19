@@ -2,17 +2,10 @@
 
 (define-fungible-token sbtc)
 
-;; FIX: Use data-var instead of constant so ownership can be transferred
-(define-data-var contract-owner principal tx-sender)
-;; FIX: Minting can be permanently disabled before mainnet launch
-(define-data-var minting-enabled bool true)
+(define-constant contract-owner tx-sender)
+(define-data-var is-minting-enabled bool true)
 
-(define-constant err-not-authorized (err u401))
-(define-constant err-minting-disabled (err u402))
-
-;; =====================
-;; SIP-010 Standard Functions
-;; =====================
+;; SIP-010 standard functions
 (define-public (transfer
     (amount uint)
     (sender principal)
@@ -39,8 +32,8 @@
 )
 
 (define-read-only (get-decimals)
-  ;; sBTC uses 8 decimals
   (ok u8)
+  ;; sBTC uses 8 decimals
 )
 
 (define-read-only (get-balance (who principal))
@@ -55,45 +48,22 @@
   (ok none)
 )
 
-;; =====================
-;; Admin Functions
-;; =====================
-
-;; FIX: Transfer ownership in case of key rotation or multisig migration
-(define-public (transfer-ownership (new-owner principal))
-  (begin
-    (asserts! (is-eq tx-sender (var-get contract-owner)) err-not-authorized)
-    (ok (var-set contract-owner new-owner))
-  )
-)
-
-;; FIX: Permanently disable minting when supply is finalized for mainnet
-(define-public (disable-minting)
-  (begin
-    (asserts! (is-eq tx-sender (var-get contract-owner)) err-not-authorized)
-    (ok (var-set minting-enabled false))
-  )
-)
-
-;; Mint — owner only + minting must be enabled
+;; Minting function for local testing
 (define-public (mint
     (amount uint)
     (recipient principal)
   )
   (begin
-    (asserts! (is-eq tx-sender (var-get contract-owner)) err-not-authorized)
-    (asserts! (var-get minting-enabled) err-minting-disabled)
+    (asserts! (is-eq tx-sender contract-owner) (err u401))
+    (asserts! (var-get is-minting-enabled) (err u403))
     (ft-mint? sbtc amount recipient)
   )
 )
 
-;; =====================
-;; Read-Only Helpers
-;; =====================
-(define-read-only (get-contract-owner)
-  (ok (var-get contract-owner))
-)
-
-(define-read-only (is-minting-enabled)
-  (ok (var-get minting-enabled))
+;; Disable Minting
+(define-public (disable-minting)
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) (err u401))
+    (ok (var-set is-minting-enabled false))
+  )
 )

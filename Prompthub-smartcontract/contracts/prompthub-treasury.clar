@@ -5,69 +5,55 @@
 
 (define-constant err-not-authorized (err u100))
 
-;; FIX: Use data-var so admin can be transferred (e.g. to multisig)
-(define-data-var platform-admin principal tx-sender)
+(define-data-var contract-owner principal tx-sender)
 
-;; =====================
-;; Deposit Functions (callable by other contracts)
-;; =====================
-
+;; Deposit STX (called by anyone, usually other contracts)
 (define-public (deposit-stx (amount uint))
   (stx-transfer? amount tx-sender (as-contract tx-sender))
 )
 
+;; Deposit sBTC
 (define-public (deposit-sbtc
     (amount uint)
     (sbtc-contract <sip-010-trait>)
   )
-  (contract-call? sbtc-contract transfer amount tx-sender (as-contract tx-sender) none)
+  (contract-call? sbtc-contract transfer amount tx-sender (as-contract tx-sender)
+    none
+  )
 )
 
-;; =====================
-;; Withdraw Functions (Admin only)
-;; =====================
-
+;; Withdraw STX (Only Admin)
 (define-public (withdraw-stx
     (amount uint)
     (recipient principal)
   )
   (begin
-    (asserts! (is-eq tx-sender (var-get platform-admin)) err-not-authorized)
+    (asserts! (is-eq tx-sender (var-get contract-owner)) err-not-authorized)
     (as-contract (stx-transfer? amount tx-sender recipient))
   )
 )
 
+;; Withdraw sBTC (Only Admin)
 (define-public (withdraw-sbtc
     (amount uint)
     (recipient principal)
     (sbtc-contract <sip-010-trait>)
   )
   (begin
-    (asserts! (is-eq tx-sender (var-get platform-admin)) err-not-authorized)
+    (asserts! (is-eq tx-sender (var-get contract-owner)) err-not-authorized)
     (as-contract (contract-call? sbtc-contract transfer amount tx-sender recipient none))
   )
 )
 
-;; =====================
-;; Admin Management
-;; =====================
-
-;; FIX: Transfer admin to new principal (e.g. rotate to multisig wallet)
-(define-public (transfer-admin (new-admin principal))
-  (begin
-    (asserts! (is-eq tx-sender (var-get platform-admin)) err-not-authorized)
-    (ok (var-set platform-admin new-admin))
-  )
-)
-
-;; =====================
-;; Read-Only
-;; =====================
-
+;; Read-Only Balances
 (define-read-only (get-stx-balance)
   (stx-get-balance (as-contract tx-sender))
 )
 
-(define-read-only (get-admin)
-  (ok (var-get platform-admin))
+;; Transfer Ownership
+(define-public (transfer-ownership (new-owner principal))
+  (begin
+    (asserts! (is-eq tx-sender (var-get contract-owner)) err-not-authorized)
+    (ok (var-set contract-owner new-owner))
+  )
 )

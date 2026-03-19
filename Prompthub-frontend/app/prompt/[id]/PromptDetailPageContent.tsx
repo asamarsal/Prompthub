@@ -6,13 +6,13 @@ import { AppShell } from "@/components/app-shell"
 import { PromptCard } from "@/components/prompt-card"
 import { PurchaseModal } from "@/components/purchase-modal"
 import { prompts as mockPrompts } from "@/lib/mock-data"
-import { ChevronRight, Check, Copy, Heart, Share2, Star, ExternalLink, Zap, Lock, BadgeCheck, Clock, Unlock, Loader2 } from "lucide-react"
+import { ChevronRight, Check, Copy, Heart, Share2, Star, ExternalLink, Zap, Lock, BadgeCheck, Clock, Unlock, Loader2, FileText } from "lucide-react"
 import { openSTXTransfer, openContractCall } from "@stacks/connect"
 import { uintCV, stringAsciiCV, contractPrincipalCV } from "@stacks/transactions"
 import { STACKS_TESTNET, STACKS_MOCKNET } from "@stacks/network"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { getPrompt, toggleBookmark, fetchPremiumContent, deactivatePrompt, updatePromptPrice } from "@/lib/api"
+import { getPrompt, toggleBookmark, fetchPremiumContent, deactivatePrompt, updatePromptPrice, submitReview } from "@/lib/api"
 import { useWallet } from "@/lib/wallet-context"
 import { useStacksPrice } from "@/lib/hooks/use-stacks-price"
 
@@ -54,6 +54,9 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
     const [premiumContent, setPremiumContent] = useState<string | null>(null)
     const [unlockLoading, setUnlockLoading] = useState(false)
     const [isActionLoading, setIsActionLoading] = useState(false)
+    const [newReviewRating, setNewReviewRating] = useState(0)
+    const [newReviewComment, setNewReviewComment] = useState("")
+    const [submittingReview, setSubmittingReview] = useState(false)
 
     const isOwner = isConnected && address === prompt?.creator
 
@@ -164,6 +167,26 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
             })
         } finally {
             setBookmarkLoading(false)
+        }
+    }
+
+    const handleAddReview = async () => {
+        if (!prompt || newReviewRating === 0) return
+        setSubmittingReview(true)
+        try {
+            await submitReview(String(prompt.id), newReviewRating, newReviewComment)
+            toast.success("Review submitted!")
+            setNewReviewRating(0)
+            setNewReviewComment("")
+            // Refresh reviews
+            const res = await import("@/lib/api").then(api => api.getPromptReviews(id))
+            setReviews(res.data || [])
+            setPrompt((prev: any) => ({ ...prev, reviewsCount: res.total || res.data?.length || 0 }))
+        } catch (err) {
+            console.error("Failed to submit review:", err)
+            toast.error("Failed to submit review")
+        } finally {
+            setSubmittingReview(false)
         }
     }
 
@@ -392,33 +415,132 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                                                     <p className="mt-4 text-[10px] text-[#a78bfa]/40 font-mono uppercase tracking-widest">Powered by x402-stacks</p>
                                                 </div>
                                             ) : (
-                                                <div className="animate-in zoom-in-95 fade-in duration-500 relative z-10">
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <div className="flex items-center gap-2 text-[#b4ff39]">
-                                                            <Unlock className="w-4 h-4" />
-                                                            <span className="text-xs font-black uppercase tracking-widest">Content Decrypted</span>
+                                                <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-5 duration-700">
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <h3 className="text-xl font-bold text-[#b4ff39] flex items-center gap-2 uppercase tracking-tighter">
+                                                                <Unlock className="w-5 h-5" /> Content Unlocked
+                                                            </h3>
+                                                            <p className="text-[10px] text-[#a78bfa]/60 uppercase tracking-widest mt-1">Access granted via Stacks Transaction</p>
                                                         </div>
-                                                        <button
-                                                            onClick={() => {
-                                                                navigator.clipboard.writeText(premiumContent);
-                                                                toast.success("Copied!", { description: "Prompt content copied to clipboard.", duration: 2000 });
-                                                            }}
-                                                            className="text-[10px] text-[#a78bfa] hover:text-[#b4ff39] transition-colors flex items-center gap-1 font-bold uppercase"
-                                                        >
-                                                            <Copy className="w-3 h-3" /> Copy
-                                                        </button>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => {
+                                                                    const blob = new Blob([premiumContent ?? ""], { type: "text/plain" })
+                                                                    const url = URL.createObjectURL(blob)
+                                                                    const a = document.createElement("a")
+                                                                    a.href = url
+                                                                    a.download = `prompt-${prompt.id}.txt`
+                                                                    a.click()
+                                                                }}
+                                                                className="flex items-center gap-2 px-4 py-2 bg-[#b4ff39]/10 border border-[#b4ff39]/30 text-[#b4ff39] text-[10px] font-bold uppercase tracking-widest hover:bg-[#b4ff39]/20 transition-all"
+                                                            >
+                                                                <Zap className="w-3 h-3" /> Download All
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                    <div className="p-6 bg-black/60 border border-[#b4ff39]/30 rounded font-mono text-sm text-[#b4ff39] break-all leading-relaxed shadow-inner">
-                                                        {premiumContent}
+
+                                                    {/* Files List if available */}
+                                                    {(prompt.additional_info?.files || []).length > 0 && (
+                                                        <div className="flex flex-col gap-3">
+                                                            <h4 className="text-[10px] font-bold text-[#a78bfa] uppercase tracking-[0.2em] mb-1">PROMPT PACKAGE FILES</h4>
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                                {prompt.additional_info.files.map((file: any, idx: number) => (
+                                                                    <div key={idx} className="bg-black/40 border border-[#2a2a30] p-4 flex items-center justify-between group hover:border-[#b4ff39]/30 transition-all">
+                                                                        <div className="flex items-center gap-3 min-w-0">
+                                                                            <div className="p-2 bg-[#a78bfa]/10 rounded-lg">
+                                                                                <FileText className="w-4 h-4 text-[#a78bfa]" />
+                                                                            </div>
+                                                                            <div className="min-w-0">
+                                                                                <p className="text-sm font-bold text-[#e0d4ff] truncate">{file.name}</p>
+                                                                                <p className="text-[10px] text-[#a78bfa]/40 font-mono">{(file.size / 1024).toFixed(1)} KB</p>
+                                                                            </div>
+                                                                        </div>
+                                                                        <a
+                                                                            href={file.url}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="p-2 hover:bg-[#b4ff39]/20 rounded-full text-[#a78bfa] hover:text-[#b4ff39] transition-all"
+                                                                        >
+                                                                            <ExternalLink className="w-4 h-4" />
+                                                                        </a>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center justify-between">
+                                                            <h4 className="text-[10px] font-bold text-[#a78bfa] uppercase tracking-[0.2em]">RAW CONTENT / PREVIEW</h4>
+                                                            <button
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(premiumContent ?? "")
+                                                                    toast.success("Prompt copied to clipboard!")
+                                                                }}
+                                                                className="text-[10px] font-bold text-[#b4ff39] hover:underline flex items-center gap-1"
+                                                            >
+                                                                <Copy className="w-3 h-3" /> Copy
+                                                            </button>
+                                                        </div>
+                                                        <div className="p-6 bg-black/60 border border-[#b4ff39]/30 rounded font-mono text-sm text-[#b4ff39] break-all leading-relaxed shadow-inner whitespace-pre-wrap max-h-[500px] overflow-y-auto custom-scrollbar">
+                                                            {premiumContent}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
+
+                                                    {/* Additional Links section */}
+                                                    {((prompt.additional_info?.links || prompt.additional_info || []).length > 0) && (
+                                                        <div className="mt-4 pt-6 border-t border-[#2a2a30]">
+                                                            <h4 className="text-[10px] font-bold text-[#a78bfa] uppercase tracking-[0.2em] mb-4">RESOURCES & EXTERNAL LINKS</h4>
+                                                            <div className="flex flex-wrap gap-3">
+                                                                {(Array.isArray(prompt.additional_info) ? prompt.additional_info : prompt.additional_info?.links || []).map((link: any, idx: number) => (
+                                                                    <a
+                                                                        key={idx}
+                                                                        href={link.url}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="flex items-center gap-2 px-3 py-1.5 bg-[#160f24] border border-[#2a2a30] rounded-lg text-xs font-bold text-[#e0d4ff] hover:border-[#ff2d95] transition-all group shadow-sm hover:shadow-[#ff2d95]/20"
+                                                                    >
+                                                                        <ExternalLink className="w-3 h-3 text-[#ff2d95] group-hover:scale-110 transition-transform" />
+                                                                        {link.label || "Link"}
+                                                                    </a>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>)}
                                         </div>
                                     </div>
                                 )}
 
                                 {activeTab === "reviews" && (
                                     <div className="flex flex-col gap-4">
+                                        {premiumContent && (
+                                            <div className="bg-[#160f24]/60 backdrop-blur-md border-2 border-[#ff2d95]/50 p-4 mb-2">
+                                                <h4 className="text-sm font-bold text-[#e0d4ff] uppercase tracking-widest mb-3">Leave a Review</h4>
+                                                <div className="flex gap-2 mb-3">
+                                                    {[1, 2, 3, 4, 5].map((s) => (
+                                                        <button key={s} onClick={() => setNewReviewRating(s)}>
+                                                            <Star className={`w-5 h-5 ${s <= newReviewRating ? "fill-[#ff2d95] text-[#ff2d95]" : "text-[#2a2a30]"}`} />
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <textarea
+                                                    className="w-full bg-black/50 border border-[#2a2a30] text-sm p-3 mb-3 focus:border-[#ff2d95] outline-none text-[#e0d4ff] placeholder:text-[#a78bfa]/30"
+                                                    placeholder="Share your experience..."
+                                                    rows={3}
+                                                    value={newReviewComment}
+                                                    onChange={(e) => setNewReviewComment(e.target.value)}
+                                                />
+                                                <button
+                                                    disabled={newReviewRating === 0 || submittingReview}
+                                                    onClick={handleAddReview}
+                                                    className="w-full bg-[#ff2d95] py-2 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#ff2d95]/80 disabled:opacity-30 transition-colors"
+                                                >
+                                                    {submittingReview ? "Submitting..." : "Submit Review"}
+                                                </button>
+                                            </div>
+                                        )}
                                         {reviewsLoading ? (
                                             <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-[#ff2d95]" /></div>
                                         ) : reviews.length > 0 ? (
@@ -584,7 +706,7 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                                                     setIsActionLoading(true)
                                                     try {
                                                         const network = process.env.NEXT_PUBLIC_STACKS_NETWORK === 'mocknet' ? STACKS_MOCKNET : STACKS_TESTNET
-                                                        const contractStr = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || 'ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT.prompthub-marketplace'
+                                                        const contractStr = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || 'STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4.prompthub-marketplace'
                                                         const [contractAddress, contractName] = contractStr.split('.')
 
                                                         await openContractCall({
@@ -622,7 +744,7 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                                                     setIsActionLoading(true)
                                                     try {
                                                         const network = process.env.NEXT_PUBLIC_STACKS_NETWORK === 'mocknet' ? STACKS_MOCKNET : STACKS_TESTNET
-                                                        const contractStr = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || 'ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT.prompthub-marketplace'
+                                                        const contractStr = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || 'STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4.prompthub-marketplace'
                                                         const [contractAddress, contractName] = contractStr.split('.')
 
                                                         await openContractCall({

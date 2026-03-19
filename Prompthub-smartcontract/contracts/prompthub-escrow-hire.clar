@@ -1,58 +1,38 @@
 ;; prompthub-escrow-hire
 ;; Escrow contract for P2P designer hiring.
-
 (use-trait sip-010-trait .sip-010-trait-ft-standard.sip-010-trait)
 
-;; =====================
-;; Constants & Errors
-;; =====================
-(define-constant err-not-authorized (err u100))
-(define-constant err-job-not-found (err u101))
-(define-constant err-invalid-status (err u102))
-(define-constant err-invalid-currency (err u103))
-(define-constant err-invalid-amount (err u104))
+(define-constant err-not-authorized (err u1000))
+(define-constant err-job-not-found (err u1001))
+(define-constant err-invalid-status (err u1002))
+(define-constant err-invalid-currency (err u1003))
+(define-constant err-invalid-amount (err u1004))
+(define-constant err-timeout-not-reached (err u1005))
 
-;; FIX: Use data-var for admin so ownership is transferable
-(define-data-var platform-admin principal tx-sender)
-(define-constant platform-fee-percent u25) ;; 2.5% = 25/1000
+(define-data-var contract-owner principal tx-sender)
+(define-constant platform-fee-percent u25) ;; 2.5%
 
-;; Dispute timeout: if client hasn't acted within this many blocks,
-;; artist can trigger dispute themselves (~7 days at 10min/block)
-(define-constant dispute-timeout-blocks u1008)
-
-;; =====================
-;; Data Storage
-;; =====================
 (define-map jobs
   uint
   {
     client: principal,
     artist: principal,
     amount: uint,
-    status: (string-ascii 20), ;; "PENDING", "COMPLETED", "REFUNDED", "DISPUTED", "RESOLVED"
+    status: (string-ascii 20), ;; "PENDING", "COMPLETED", "REFUNDED", "DISPUTED"
     currency-type: (string-ascii 10),
     token-contract: principal,
-    ;; FIX: Track creation block so artist can self-dispute after timeout
-    created-at-block: uint,
+    created-at: uint,
   }
 )
 
 (define-data-var next-job-id uint u1)
 
-;; =====================
 ;; Read-Only
-;; =====================
 (define-read-only (get-job (job-id uint))
   (map-get? jobs job-id)
 )
 
-(define-read-only (get-admin)
-  (ok (var-get platform-admin))
-)
-
-;; =====================
 ;; Create Job (Client deposits STX/sBTC)
-;; =====================
 (define-public (create-hire-job
     (artist principal)
     (amount uint)
@@ -61,9 +41,7 @@
   )
   (let ((job-id (var-get next-job-id)))
     (asserts! (> amount u0) err-invalid-amount)
-    (asserts! (or (is-eq currency-type "STX") (is-eq currency-type "sBTC")) err-invalid-currency)
-
-    ;; Lock funds into escrow
+    ;; Kunci dana ke Smart Contract PENGAMAN
     (if (is-eq currency-type "STX")
       (try! (stx-transfer? amount tx-sender (as-contract tx-sender)))
       (begin
@@ -73,7 +51,6 @@
         ))
       )
     )
-
     (map-set jobs job-id {
       client: tx-sender,
       artist: artist,
@@ -81,16 +58,14 @@
       status: "PENDING",
       currency-type: currency-type,
       token-contract: (contract-of sbtc-contract),
-      created-at-block: block-height,
+      created-at: block-height,
     })
     (var-set next-job-id (+ job-id u1))
     (ok job-id)
   )
 )
 
-;; =====================
-;; Complete Job (Client approves → releases funds to artist)
-;; =====================
+;; Complete Job
 (define-public (complete-job
     (job-id uint)
     (sbtc-contract <sip-010-trait>)
@@ -120,7 +95,9 @@
         )
       )
       (begin
-        (asserts! (is-eq (contract-of sbtc-contract) token-addr) err-invalid-currency)
+        (asserts! (is-eq (contract-of sbtc-contract) token-addr)
+          err-invalid-currency
+        )
         (if (> fee u0)
           (try! (as-contract (contract-call? .prompthub-treasury deposit-sbtc fee sbtc-contract)))
           true
@@ -137,10 +114,7 @@
   )
 )
 
-;; =====================
 ;; Refund Job
-;; Client OR admin can refund a PENDING job
-;; =====================
 (define-public (refund-job
     (job-id uint)
     (sbtc-contract <sip-010-trait>)
@@ -152,7 +126,7 @@
       (currency-type (get currency-type job))
       (token-addr (get token-contract job))
     )
-    (asserts! (or (is-eq tx-sender client) (is-eq tx-sender (var-get platform-admin)))
+    (asserts! (or (is-eq tx-sender client) (is-eq tx-sender (var-get contract-owner)))
       err-not-authorized
     )
     (asserts! (is-eq (get status job) "PENDING") err-invalid-status)
@@ -163,7 +137,9 @@
         true
       )
       (begin
-        (asserts! (is-eq (contract-of sbtc-contract) token-addr) err-invalid-currency)
+        (asserts! (is-eq (contract-of sbtc-contract) token-addr)
+          err-invalid-currency
+        )
         (if (> amount u0)
           (try! (as-contract (contract-call? sbtc-contract transfer amount tx-sender client none)))
           true
@@ -175,36 +151,18 @@
   )
 )
 
-;; =====================
-;; Dispute Job
-;; FIX: Artist can now trigger dispute themselves IF client has been idle
-;; past the dispute-timeout-blocks window. Admin can always dispute.
-;; =====================
+;; Admin sets dispute
 (define-public (dispute-job (job-id uint))
-  (let (
-      (job (unwrap! (map-get? jobs job-id) err-job-not-found))
-      (artist (get artist job))
-      (created-at (get created-at-block job))
-      (timeout-passed (>= block-height (+ created-at dispute-timeout-blocks)))
-    )
+  (let ((job (unwrap! (map-get? jobs job-id) err-job-not-found)))
+    (asserts! (is-eq tx-sender (var-get contract-owner)) err-not-authorized)
     (asserts! (is-eq (get status job) "PENDING") err-invalid-status)
-    ;; Admin can always dispute; artist can dispute after timeout
-    (asserts!
-      (or
-        (is-eq tx-sender (var-get platform-admin))
-        (and (is-eq tx-sender artist) timeout-passed)
-      )
-      err-not-authorized
-    )
+
     (map-set jobs job-id (merge job { status: "DISPUTED" }))
     (ok true)
   )
 )
 
-;; =====================
-;; Resolve Dispute (Admin only)
-;; Sends full amount to the decided party — no fee on disputed funds
-;; =====================
+;; Admin resolve-dispute
 (define-public (resolve-dispute
     (job-id uint)
     (payout-to principal)
@@ -216,7 +174,7 @@
       (currency-type (get currency-type job))
       (token-addr (get token-contract job))
     )
-    (asserts! (is-eq tx-sender (var-get platform-admin)) err-not-authorized)
+    (asserts! (is-eq tx-sender (var-get contract-owner)) err-not-authorized)
     (asserts! (is-eq (get status job) "DISPUTED") err-invalid-status)
 
     (if (is-eq currency-type "STX")
@@ -225,7 +183,9 @@
         true
       )
       (begin
-        (asserts! (is-eq (contract-of sbtc-contract) token-addr) err-invalid-currency)
+        (asserts! (is-eq (contract-of sbtc-contract) token-addr)
+          err-invalid-currency
+        )
         (if (> amount u0)
           (try! (as-contract (contract-call? sbtc-contract transfer amount tx-sender payout-to none)))
           true
@@ -237,14 +197,22 @@
   )
 )
 
-;; =====================
-;; Admin Management
-;; =====================
+;; Artist sets dispute (Timeout: 1 week approx 1008 blocks)
+(define-public (dispute-job-artist (job-id uint))
+  (let ((job (unwrap! (map-get? jobs job-id) err-job-not-found)))
+    (asserts! (is-eq tx-sender (get artist job)) err-not-authorized)
+    (asserts! (is-eq (get status job) "PENDING") err-invalid-status)
+    (asserts! (> block-height (+ (get created-at job) u1008)) err-timeout-not-reached)
 
-;; FIX: Transfer admin to new principal (e.g. multisig)
-(define-public (transfer-admin (new-admin principal))
+    (map-set jobs job-id (merge job { status: "DISPUTED" }))
+    (ok true)
+  )
+)
+
+;; Transfer Ownership
+(define-public (transfer-ownership (new-owner principal))
   (begin
-    (asserts! (is-eq tx-sender (var-get platform-admin)) err-not-authorized)
-    (ok (var-set platform-admin new-admin))
+    (asserts! (is-eq tx-sender (var-get contract-owner)) err-not-authorized)
+    (ok (var-set contract-owner new-owner))
   )
 )

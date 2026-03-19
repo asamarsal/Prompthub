@@ -9,50 +9,50 @@ plan:
     transactions:
     - transaction-type: contract-publish
       contract-name: nft-trait
-      expected-sender: ST2PFEWWGQVY8ERW3F60ZYKHPRK5BJ35ENKWW1G05
-      cost: 4380
+      expected-sender: STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4
+      cost: 3090
       path: contracts\nft-trait.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: sip-010-trait-ft-standard
-      expected-sender: ST2PFEWWGQVY8ERW3F60ZYKHPRK5BJ35ENKWW1G05
-      cost: 8400
+      expected-sender: STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4
+      cost: 4950
       path: contracts\sip-010-trait-ft-standard.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: prompthub-treasury
-      expected-sender: ST2PFEWWGQVY8ERW3F60ZYKHPRK5BJ35ENKWW1G05
-      cost: 12670
+      expected-sender: STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4
+      cost: 15140
       path: contracts\prompthub-treasury.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: prompthub-contests
-      expected-sender: ST2PFEWWGQVY8ERW3F60ZYKHPRK5BJ35ENKWW1G05
-      cost: 122520
+      expected-sender: STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4
+      cost: 139080
       path: contracts\prompthub-contests.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: prompthub-escrow-hire
-      expected-sender: ST2PFEWWGQVY8ERW3F60ZYKHPRK5BJ35ENKWW1G05
-      cost: 55510
+      expected-sender: STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4
+      cost: 64040
       path: contracts\prompthub-escrow-hire.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: prompthub-marketplace
-      expected-sender: ST2PFEWWGQVY8ERW3F60ZYKHPRK5BJ35ENKWW1G05
-      cost: 48180
+      expected-sender: STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4
+      cost: 62660
       path: contracts\prompthub-marketplace.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: sbtc-token
-      expected-sender: ST2PFEWWGQVY8ERW3F60ZYKHPRK5BJ35ENKWW1G05
-      cost: 10690
+      expected-sender: STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4
+      cost: 13410
       path: contracts\sbtc-token.clar
       anchor-block-only: true
       clarity-version: 2

@@ -6,7 +6,7 @@ import { Check, Loader2, ExternalLink, Download, LayoutDashboard, Share2 } from 
 import type { Prompt } from "@/lib/mock-data"
 import { useWallet } from "@/lib/wallet-context"
 import { openContractCall } from "@stacks/connect"
-import { uintCV, stringAsciiCV, contractPrincipalCV, Pc } from "@stacks/transactions"
+import { uintCV, stringAsciiCV, contractPrincipalCV, Pc, PostConditionMode } from "@stacks/transactions"
 import { STACKS_TESTNET, STACKS_MOCKNET } from "@stacks/network"
 import { recordTransaction, submitReview, fetchPremiumContent } from "@/lib/api"
 import { toast } from "sonner"
@@ -40,7 +40,7 @@ export function PurchaseModal({
     ? STACKS_MOCKNET
     : STACKS_TESTNET
 
-  const contractPrincipalStr = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || 'ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT.prompthub-marketplace'
+  const contractPrincipalStr = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || 'STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4.prompthub-marketplace'
   const [contractAddress, contractName] = contractPrincipalStr.includes('.')
     ? contractPrincipalStr.split('.')
     : [contractPrincipalStr, 'prompthub-marketplace']
@@ -102,6 +102,7 @@ export function PurchaseModal({
           uintCV(prompt.contract_id),
           contractPrincipalCV(contractAddress, 'sbtc-token')
         ],
+        postConditionMode: PostConditionMode.Allow,
         postConditions,
         onFinish: async (data) => {
           setTxId(data.txId)
@@ -180,7 +181,7 @@ export function PurchaseModal({
         {state === "success" || state === "reviewing" ? (
           <div className="flex flex-col items-center gap-4 p-8">
             <div className="w-16 h-16 border-2 border-[#b4ff39] flex items-center justify-center bg-[#b4ff39]/10 shadow-[4px_4px_0_0_#b4ff39]">
-              <Loader2 className="w-8 h-8 text-[#b4ff39] animate-spin" />
+              <Check className="w-8 h-8 text-[#b4ff39]" />
             </div>
             <h3 className="text-xl font-extrabold text-[#e0d4ff] uppercase tracking-wider mt-2">Transaction Broadcasted</h3>
             <p className="text-sm text-[#a78bfa] text-center font-medium">

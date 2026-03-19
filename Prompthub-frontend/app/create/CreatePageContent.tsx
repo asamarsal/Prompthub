@@ -54,7 +54,7 @@ interface FormData {
   price: string
   license: "Free" | "Commercial" | "Exclusive"
   royalty: number
-  file: File | null
+  files: File[]
   previewImageUrl: string
   previewImageFile: File | null
   previewMode: "url" | "upload"
@@ -83,7 +83,7 @@ export default function CreatePageContent() {
     price: "0.005",
     license: "Commercial",
     royalty: 5,
-    file: null,
+    files: [],
     previewImageUrl: "",
     previewImageFile: null,
     previewMode: "upload",
@@ -119,8 +119,8 @@ export default function CreatePageContent() {
   const removeTag = (tag: string) => update("tags", form.tags.filter((t) => t !== tag))
 
   const handleDeploy = async () => {
-    if (!form.file) {
-      alert("Please upload a prompt file first.")
+    if (form.files.length === 0) {
+      alert("Please upload at least one prompt file first.")
       return
     }
 
@@ -138,20 +138,31 @@ export default function CreatePageContent() {
       }
 
       // 1. Upload the real Prompt Content to local storage
-      console.log("Uploading prompt file to local storage folder:", groupId)
-      const uploadRes = await uploadPromptAsset(form.file, groupId)
-      const promptUrl = uploadRes.url
-      console.log("File uploaded to local, URL:", promptUrl)
+      console.log("Uploading prompt files to local storage folder:", groupId)
+      const uploadedFiles: { name: string, url: string, size: number, type: string }[] = []
+      let combinedContent = ""
 
-      // Extract file text if it's a text/code prompt to save in DB for quick access
-      let originalContent = ""
-      if (form.contentType === "TEXT" || form.contentType === "CODE") {
-        try {
-          originalContent = await form.file.text()
-        } catch (e) {
-          console.error("Failed to read file text", e)
+      for (const f of form.files) {
+        const uploadRes = await uploadPromptAsset(f, groupId)
+        uploadedFiles.push({
+          name: f.name,
+          url: uploadRes.url,
+          size: f.size,
+          type: f.type
+        })
+
+        // Extract text for first few text-based files to show in preview/DB
+        if ((form.contentType === "TEXT" || form.contentType === "CODE") && combinedContent.length < 5000) {
+          try {
+            const text = await f.text()
+            combinedContent += `--- FILE: ${f.name} ---\n${text}\n\n`
+          } catch (e) {
+            console.error("Failed to read file text", e)
+          }
         }
       }
+
+      const promptUrl = uploadedFiles.length > 0 ? uploadedFiles[0].url : ""
 
       // 2. Upload NFT Metadata to IPFS
       const metadataRes = await uploadMetadata({
@@ -162,7 +173,8 @@ export default function CreatePageContent() {
           category: form.category,
           model: form.model,
           content_type: form.contentType,
-          prompt_url: promptUrl, // Link to local backend storage
+          prompt_url: promptUrl,
+          files: uploadedFiles, // Store all file info in metadata
           license: form.license,
           royalty: form.royalty,
           additional_info: form.additionalLinks.filter(l => l.url.trim() !== ""),
@@ -209,10 +221,13 @@ export default function CreatePageContent() {
             is_nsfw: form.isNsfw,
             license_type: form.license.toUpperCase(),
             royalty_percentage: form.royalty,
-            stacks_tx_id: data.txId, // Store the TX ID for verification
+            stacks_tx_id: data.txId,
             currency: form.currency,
-            additional_info: form.additionalLinks.filter(l => l.url.trim() !== ""),
-            original_content: originalContent
+            additional_info: {
+              links: form.additionalLinks.filter(l => l.url.trim() !== ""),
+              files: uploadedFiles
+            },
+            original_content: combinedContent
           })
           setDeployedTxId(data.txId)
           setDeployedMetadataCID(metadataCID)
@@ -242,7 +257,7 @@ export default function CreatePageContent() {
     form.description.length > 0 &&
     (form.previewMode === "url" ? form.previewImageUrl.length > 0 : form.previewImageFile !== null),
     Number(form.price) >= 0,
-    form.file !== null,
+    form.files.length > 0,
     true,
   ]
 
@@ -637,7 +652,7 @@ export default function CreatePageContent() {
                 {step === 2 && (
                   <div className="flex flex-col gap-6">
                     <div
-                      className={`backdrop-blur-md bg-[#160f24]/60 border-2 border-dashed p-12 text-center cursor-pointer transition-all ${form.file ? "border-[#b4ff39] bg-[#b4ff39]/10 shadow-[8px_8px_0_0_#b4ff39]" : "border-[#2a2a30] hover:border-[#00ffff] hover:shadow-[4px_4px_0_0_#00ffff]"
+                      className={`backdrop-blur-md bg-[#160f24]/60 border-2 border-dashed p-12 text-center cursor-pointer transition-all ${form.files.length > 0 ? "border-[#b4ff39] bg-[#b4ff39]/10 shadow-[8px_8px_0_0_#b4ff39]" : "border-[#2a2a30] hover:border-[#00ffff] hover:shadow-[4px_4px_0_0_#00ffff]"
                         }`}
                       onClick={() => document.getElementById("prompt-upload")?.click()}
                       role="button"
@@ -648,47 +663,49 @@ export default function CreatePageContent() {
                       <input
                         id="prompt-upload"
                         type="file"
+                        multiple
                         className="hidden"
                         onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) update("file", file)
+                          const newFiles = Array.from(e.target.files || [])
+                          if (newFiles.length > 0) update("files", [...form.files, ...newFiles])
                         }}
                       />
-                      {form.file ? (
-                        <div>
-                          <div className="w-14 h-14 mx-auto mb-3 rounded-xl bg-[#b4ff39]/15 flex items-center justify-center glow-green">
-                            <FileText className="w-7 h-7 text-[#b4ff39]" />
-                          </div>
-                          <p className="text-sm font-bold text-[#e0d4ff]">{form.file.name}</p>
-                          <div className="flex items-center justify-center gap-2 mt-2">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); update("file", null); }}
-                              className="text-xs text-[#ff2d95] hover:underline font-bold"
-                            >
-                              Remove
-                            </button>
-                            <span className="text-[#a78bfa]/30">|</span>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); document.getElementById("prompt-upload")?.click(); }}
-                              className="text-xs text-[#00ffff] hover:underline font-bold"
-                            >
-                              Change
-                            </button>
-                          </div>
+                      <div>
+                        <div className="w-14 h-14 mx-auto mb-3 rounded-xl glass flex items-center justify-center">
+                          <Upload className="w-7 h-7 text-[#ff2d95]" />
                         </div>
-                      ) : (
-                        <div>
-                          <div className="w-14 h-14 mx-auto mb-3 rounded-xl glass flex items-center justify-center">
-                            <Upload className="w-7 h-7 text-[#ff2d95]" />
-                          </div>
-                          <p className="text-sm font-bold text-[#e0d4ff]">Click to upload your prompt</p>
-                          <p className="text-xs text-[#a78bfa]/50 mt-1 font-mono">Supports TXT, JSON, MD (Max 10MB)</p>
-                        </div>
-                      )}
+                        <p className="text-sm font-bold text-[#e0d4ff]">Click to upload your prompt files</p>
+                        <p className="text-xs text-[#a78bfa]/50 mt-1 font-mono">Supports TXT, JSON, MD, CODE (Max 10MB per file)</p>
+                      </div>
                     </div>
 
-                    {form.file && (
-                      <div className="bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] p-4">
+                    {form.files.length > 0 && (
+                      <div className="flex flex-col gap-3">
+                        <h4 className="text-xs font-bold text-[#b4ff39] uppercase tracking-widest">Uploaded Files ({form.files.length})</h4>
+                        <div className="flex flex-col gap-2">
+                          {form.files.map((f, idx) => (
+                            <div key={idx} className="bg-[#160f24]/80 border border-[#2a2a30] p-3 flex items-center justify-between group">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <FileText className="w-4 h-4 text-[#a78bfa] shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-[#e0d4ff] truncate">{f.name}</p>
+                                  <p className="text-[10px] text-[#a78bfa]/60 font-mono">{(f.size / 1024).toFixed(1)} KB</p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); update("files", form.files.filter((_, i) => i !== idx)); }}
+                                className="p-1 hover:bg-[#ff2d95]/10 rounded transition-colors"
+                              >
+                                <X className="w-4 h-4 text-[#ff2d95]" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {form.files.length > 0 && (
+                      <div className="bg-[#160f24]/60 backdrop-blur-md border-2 border-[#2a2a30] p-4 animate-in fade-in slide-in-from-top-2 duration-500">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs text-[#a78bfa] font-mono">Encryption</span>
                           <span className="text-xs text-[#b4ff39] flex items-center gap-1 font-bold">

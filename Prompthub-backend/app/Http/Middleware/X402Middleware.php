@@ -23,7 +23,7 @@ class X402Middleware
         $user     = Auth::user();
 
         // The STX address of the prompt owner (payTo)
-        $ownerAddress = $prompt->user?->stx_address ?? config('stacks.marketplace_contract_address', 'ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT');
+        $ownerAddress = $prompt->user?->stx_address ?? config('stacks.marketplace_contract_address', 'STKA3TNQ6GTB41XN057X1VK6RF11JZZTJ1BXBJT4');
 
         // Required amount: prompt price in microSTX (1 STX = 1,000,000 µSTX)
         $requiredMicroStx = (int) ($prompt->price_sbtc * 1_000_000);
