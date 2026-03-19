@@ -94,7 +94,8 @@ class AuthController extends Controller
 
         // Convert to array and handle nested data
         $userData = $user->toArray();
-        $userData['specialties'] = $this->mapSpecialties($user->specialization_id);
+        $userData['specialties'] = $user->getMappedSpecialties();
+        $userData['tools'] = $user->getMappedTools();
         
         $userData['stats'] = [
             'rating' => round($user->rating_avg ?? 0, 1),
@@ -105,25 +106,6 @@ class AuthController extends Controller
         $userData['activities'] = $activities;
 
         return $userData;
-    }
-
-    private function mapSpecialties($specialization_id)
-    {
-        $map = [
-            1 => 'Brand Identity',
-            2 => 'Product Photography',
-            3 => 'Ad Creative',
-            4 => 'Video / Motion',
-            5 => 'Character Design',
-            6 => '3D Render',
-            7 => 'NFT Collection',
-            8 => 'Social Media Pack',
-        ];
-
-        $specs = is_array($specialization_id) ? $specialization_id : json_decode($specialization_id, true) ?? [];
-        $mapped = array_filter(array_map(fn($id) => $map[$id] ?? null, $specs));
-        
-        return !empty($mapped) ? array_values($mapped) : ['AI Artist'];
     }
 
     public function update(Request $request)

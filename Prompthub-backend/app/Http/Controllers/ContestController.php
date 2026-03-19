@@ -63,9 +63,26 @@ class ContestController extends Controller
 
     public function selectWinner(Request $request, $id)
     {
+        $request->validate([
+            'submission_id' => 'required|uuid|exists:contest_submissions,id',
+        ]);
+
         $contest = Contest::findOrFail($id);
-        // Triggers sBTC payout via IPFS / Smart Contract listener
-        $contest->update(['status' => 'COMPLETED']);
-        return response()->json(['message' => 'Winner selected']);
+        $submission = \App\Models\ContestSubmission::findOrFail($request->submission_id);
+
+        // Update submission as winner
+        $submission->update(['is_winner' => true]);
+
+        // Update contest status and winner reference
+        $contest->update([
+            'status' => 'COMPLETED',
+            'winner_submission_id' => $submission->id
+        ]);
+
+        return response()->json([
+            'message' => 'Winner selected and contest completed',
+            'contest' => $contest,
+            'submission' => $submission
+        ]);
     }
 }

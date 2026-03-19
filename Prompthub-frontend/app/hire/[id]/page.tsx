@@ -51,13 +51,13 @@ export default function ArtistPage({ params }: { params: Promise<{ id: string }>
         handle: user.username || user.stx_address.substring(0, 8),
         bio: user.bio || "No bio provided.",
         available: user.is_available_for_freelance ?? true,
-        rating: 5.0,
-        reviews: 0,
-        completedProjects: 0,
+        rating: user.stats?.rating || 5.0,
+        reviews: user.stats?.reviews || 0,
+        completedProjects: user.stats?.projects || 0,
         hourlyRate: user.hourly_rate || 0.002,
         currency: user.hourly_rate_currency || "sBTC",
-        tools: ['Midjourney v6', 'DALL-E 3'],
-        specialties: ['Prompt Engineering']
+        tools: user.tools && user.tools.length > 0 ? user.tools : ['Midjourney v6', 'DALL-E 3'],
+        specialties: user.specialties && user.specialties.length > 0 ? user.specialties : ['AI Artist']
     }
 
     return (

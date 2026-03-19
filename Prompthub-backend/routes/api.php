@@ -26,6 +26,7 @@ Route::get('/prompts', [PromptController::class, 'index']);
 Route::get('/prompts/{id}', [PromptController::class, 'show']);
 Route::get('/contests', [ContestController::class, 'index']);
 Route::get('/contests/{id}', [ContestController::class, 'show']);
+Route::get('/contests/{id}/submissions', [\App\Http\Controllers\ContestSubmissionController::class, 'index']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/ai-models', [AiModelController::class, 'index']);
 Route::get('/artists', [UserController::class, 'artists']);
@@ -62,8 +63,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Contests
     Route::post('/contests', [ContestController::class, 'store']);
     Route::post('/contests/{id}/verify-fund', [ContestController::class, 'verifyFund']);
-    Route::post('/contests/{id}/submit', [ContestController::class, 'submit']);
-    Route::post('/contests/{id}/select-winner', [ContestController::class, 'selectWinner']);
+    Route::post('/contests/{id}/submissions', [\App\Http\Controllers\ContestSubmissionController::class, 'store']);
+    Route::post('/contests/{id}/winner', [ContestController::class, 'selectWinner']);
 
     // Hire
     Route::get('/hire/my-requests', [HireRequestController::class, 'index']);

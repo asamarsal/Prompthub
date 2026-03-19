@@ -41,22 +41,8 @@ class UserController extends Controller
                     'avatar' => $artist->avatar_url,
                     'available' => (bool)$artist->is_available_for_freelance,
                     'verified' => true,
-                    'specialties' => (function() use ($artist) {
-                        $map = [
-                            1 => 'Brand Identity',
-                            2 => 'Product Photography',
-                            3 => 'Ad Creative',
-                            4 => 'Video / Motion',
-                            5 => 'Character Design',
-                            6 => '3D Render',
-                            7 => 'NFT Collection',
-                            8 => 'Social Media Pack',
-                        ];
-                        $specs = is_array($artist->specialization_id) ? $artist->specialization_id : json_decode($artist->specialization_id, true) ?? [];
-                        $mapped = array_filter(array_map(fn($id) => $map[$id] ?? null, $specs));
-                        return !empty($mapped) ? array_values($mapped) : ['AI Artist'];
-                    })(),
-                    'tools' => ['Midjourney v6', 'DALL-E 3'], // Default placeholder
+                    'specialties' => $artist->getMappedSpecialties(),
+                    'tools' => $artist->getMappedTools(),
                     'rating' => $artist->rating_avg ? (float)$artist->rating_avg : 0,
                     'reviews' => $artist->rating_count ? (int)$artist->rating_count : 0,
                     'hourlyRate' => $artist->hourly_rate ? (float)$artist->hourly_rate : 0.002,

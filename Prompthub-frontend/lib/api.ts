@@ -210,6 +210,7 @@ export interface ApiUser {
     hourly_rate_currency?: string
     specialization_id?: number[]
     specialties?: string[]
+    tools?: string[]
     stats?: ProfileStats
     activities?: UserActivity[]
 }
@@ -453,4 +454,43 @@ export async function acceptFriendRequest(connectionId: number): Promise<any> {
 
 export async function removeFriendConnection(connectionId: number): Promise<any> {
     return request<any>(`/api/connections/${connectionId}`, { method: "DELETE" });
+}
+// ─── Contests ─────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/contests/{id}
+ */
+export async function getContest(id: string): Promise<any> {
+    return request<any>(`/api/contests/${id}`);
+}
+
+/**
+ * GET /api/contests/{id}/submissions
+ */
+export async function getContestSubmissions(id: string): Promise<any[]> {
+    return request<any[]>(`/api/contests/${id}/submissions`);
+}
+
+/**
+ * POST /api/contests/{id}/submissions
+ */
+export async function submitContestEntry(id: string, data: {
+    artist_address: string;
+    cid_ipfs?: string;
+    preview_image_url: string;
+}): Promise<any> {
+    return request<any>(`/api/contests/${id}/submissions`, {
+        method: "POST",
+        body: JSON.stringify(data),
+    });
+}
+
+/**
+ * POST /api/contests/{id}/winner
+ */
+export async function declareContestWinner(id: string, submissionId: string): Promise<any> {
+    return request<any>(`/api/contests/${id}/winner`, {
+        method: "POST",
+        body: JSON.stringify({ submission_id: submissionId }),
+    });
 }

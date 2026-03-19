@@ -8,42 +8,42 @@ use Illuminate\Http\Request;
 class ContestSubmissionController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of submissions for a specific contest.
      */
-    public function index()
+    public function index($contestId)
     {
-        //
+        return response()->json(
+            ContestSubmission::where('contest_id', $contestId)
+                ->orderBy('created_at', 'desc')
+                ->get()
+        );
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Store a newly created submission.
      */
-    public function store(Request $request)
+    public function store(Request $request, $contestId)
     {
-        //
+        $validated = $request->validate([
+            'artist_address' => 'required|string',
+            'cid_ipfs' => 'nullable|string',
+            'preview_image_url' => 'required|url',
+        ]);
+
+        $validated['id'] = (string) \Illuminate\Support\Str::uuid();
+        $validated['contest_id'] = $contestId;
+        $validated['is_winner'] = false;
+
+        $submission = ContestSubmission::create($validated);
+
+        return response()->json($submission, 201);
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified submission.
      */
-    public function show(ContestSubmission $contestSubmission)
+    public function show($id)
     {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, ContestSubmission $contestSubmission)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(ContestSubmission $contestSubmission)
-    {
-        //
+        return response()->json(ContestSubmission::findOrFail($id));
     }
 }
