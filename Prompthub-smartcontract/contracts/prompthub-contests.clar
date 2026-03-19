@@ -18,6 +18,7 @@
 (define-constant err-tier-not-found (err u104))
 (define-constant err-already-has-winner (err u105))
 (define-constant err-invalid-currency (err u106))
+(define-constant err-invalid-amount (err u107))
 
 ;; =====================
 ;; Data Storage
@@ -132,6 +133,8 @@
     (sbtc-contract <sip-010-trait>)
   )
   (let ((contest-id (var-get next-contest-id)))
+    (asserts! (> total-pool u0) err-invalid-amount)
+
     ;; Lock the full prize pool into escrow
     (if (is-eq currency-type "STX")
       (try! (stx-transfer? total-pool tx-sender (as-contract tx-sender)))
@@ -263,15 +266,27 @@
     ;; Transfer this tier's prize immediately to the winner (with 2.5% treasury fee deduction)
     (if (is-eq currency-type "STX")
       (begin
-        (try! (as-contract (contract-call? .prompthub-treasury deposit-stx fee)))
-        (try! (as-contract (stx-transfer? payout tx-sender winner)))
+        (if (> fee u0)
+          (try! (as-contract (contract-call? .prompthub-treasury deposit-stx fee)))
+          true
+        )
+        (if (> payout u0)
+          (try! (as-contract (stx-transfer? payout tx-sender winner)))
+          true
+        )
       )
       (begin
         (asserts! (is-eq (contract-of sbtc-contract) token-addr)
           err-invalid-currency
         )
-        (try! (as-contract (contract-call? .prompthub-treasury deposit-sbtc fee sbtc-contract)))
-        (try! (as-contract (contract-call? sbtc-contract transfer payout tx-sender winner none)))
+        (if (> fee u0)
+          (try! (as-contract (contract-call? .prompthub-treasury deposit-sbtc fee sbtc-contract)))
+          true
+        )
+        (if (> payout u0)
+          (try! (as-contract (contract-call? sbtc-contract transfer payout tx-sender winner none)))
+          true
+        )
       )
     )
 

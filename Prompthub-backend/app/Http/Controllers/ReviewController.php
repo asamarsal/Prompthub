@@ -33,7 +33,15 @@ class ReviewController extends Controller
 
         $prompt = Prompt::findOrFail($promptId);
 
-        // Verification logic could go here (e.g., check if user purchased the prompt)
+        // Verification logic: Check if user purchased the prompt OR is the creator
+        $isCreator = $user->id === $prompt->user_id;
+        $hasPurchased = \App\Models\Transaction::where('prompt_id', $promptId)
+            ->where('buyer_address', $user->stx_address)
+            ->exists();
+
+        if (!$isCreator && !$hasPurchased) {
+            return response()->json(['message' => 'You must purchase this prompt before leaving a review.'], 403);
+        }
 
         $review = Review::updateOrCreate(
             ['prompt_id' => $promptId, 'reviewer_address' => $user->stx_address],

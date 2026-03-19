@@ -6,10 +6,13 @@ import { Check, Loader2, ExternalLink, Download, LayoutDashboard, Share2 } from 
 import type { Prompt } from "@/lib/mock-data"
 import { useWallet } from "@/lib/wallet-context"
 import { openContractCall } from "@stacks/connect"
-import { uintCV, stringAsciiCV, contractPrincipalCV } from "@stacks/transactions"
+import { uintCV, stringAsciiCV, contractPrincipalCV, Pc } from "@stacks/transactions"
 import { STACKS_TESTNET, STACKS_MOCKNET } from "@stacks/network"
+import { recordTransaction, submitReview, fetchPremiumContent } from "@/lib/api"
+import { toast } from "sonner"
+import { Star } from "lucide-react"
 
-type PurchaseState = "confirm" | "processing" | "success"
+type PurchaseState = "confirm" | "processing" | "success" | "reviewing"
 type Currency = "STX" | "sBTC"
 
 export function PurchaseModal({
@@ -26,21 +29,39 @@ export function PurchaseModal({
   const [txId, setTxId] = useState<string | null>(null)
   const [currency, setCurrency] = useState<Currency>((prompt.currency as Currency) || "STX")
 
+  // Review state
+  const [rating, setRating] = useState(0)
+  const [comment, setComment] = useState("")
+  const [submittingReview, setSubmittingReview] = useState(false)
+  const [reviewSubmitted, setReviewSubmitted] = useState(false)
+
   // Use testnet by default, switch to mocknet if needed
   const network = process.env.NEXT_PUBLIC_STACKS_NETWORK === 'mocknet'
     ? STACKS_MOCKNET
     : STACKS_TESTNET
 
-  const contractAddress = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || 'ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT'
-  const contractName = 'prompthub-marketplace'
+  const contractPrincipalStr = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ADDRESS || 'ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT.prompthub-marketplace'
+  const [contractAddress, contractName] = contractPrincipalStr.includes('.')
+    ? contractPrincipalStr.split('.')
+    : [contractPrincipalStr, 'prompthub-marketplace']
 
-  const platformFee = prompt.price * 0.025
-  const royaltyFee = prompt.price * (prompt.royalty / 100)
-  const total = prompt.price + platformFee + royaltyFee
+  // In the Smart Contract, fees are deducted FROM the price.
+  // So the total to pay is exactly prompt.price.
+  const total = prompt.price
+  const platformFee = total * 0.025
+  const royaltyFee = total * (prompt.royalty / 100)
+  const sellerReceives = total - platformFee - royaltyFee
+
+  const isSelfPurchase = address === prompt.creator
 
   const handleConfirm = async () => {
     if (!isConnected || !address) {
       alert("Please connect your wallet first.")
+      return
+    }
+
+    if (isSelfPurchase) {
+      alert("You cannot purchase your own prompt.")
       return
     }
 
@@ -52,7 +73,25 @@ export function PurchaseModal({
     setState("processing")
 
     try {
-      // Contract Call to prompthub-marketplace
+      // 1. Convert to microSTX for STX or correct decimals for sBTC
+      const amountInMicro = Math.round(total * 1000000)
+
+      // 2. Define Post-Conditions (Safe Transfer)
+      const postConditions = []
+      if (currency === "STX") {
+        postConditions.push(
+          Pc.principal(address).willSendEq(amountInMicro).ustx()
+        )
+      }
+
+      // 3. Contract Call to prompthub-marketplace
+      console.log("Attempting purchase:", {
+        contractAddress,
+        contractName,
+        promptContractId: prompt.contract_id,
+        amountInMicro
+      })
+
       await openContractCall({
         network,
         contractAddress,
@@ -60,21 +99,72 @@ export function PurchaseModal({
         functionName: 'buy-prompt',
         functionArgs: [
           uintCV(prompt.contract_id),
-          stringAsciiCV(currency),
           contractPrincipalCV(contractAddress, 'sbtc-token')
         ],
-        onFinish: (data) => {
+        postConditions,
+        onFinish: async (data) => {
           setTxId(data.txId)
           setState("success")
+          toast.success("Transaction broadcasted!")
+
+          // 4. Record the transaction on our backend
+          try {
+            await recordTransaction(String(prompt.id), data.txId)
+            console.log("Transaction recorded on backend.")
+          } catch (error) {
+            console.error("Failed to record transaction on backend:", error)
+          }
         },
         onCancel: () => {
           setState("confirm")
         },
       })
-    } catch (e) {
-      console.error(e)
-      alert("An error occurred while processing the transaction.")
+    } catch (e: any) {
+      console.error("Purchase error detailed:", e)
+      const errorMsg = e.message || ""
+      if (errorMsg.includes("102") || errorMsg.includes("u102")) {
+        alert("Error (u102): This prompt ID was not found on-chain or it has already been sold. Please check if the contract was recently redeployed.")
+      } else if (errorMsg.includes("100") || errorMsg.includes("u100")) {
+        alert("Error (u100): Not authorized. You cannot purchase your own prompt.")
+      } else {
+        alert("An error occurred during the transaction: " + (errorMsg.substring(0, 100) || "Unknown error"))
+      }
       setState("confirm")
+    }
+  }
+
+  const handleDownload = async () => {
+    try {
+      const res = await fetchPremiumContent(String(prompt.id), { address })
+      const blob = new Blob([res.original_content], { type: 'text/plain' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${prompt.title.replace(/\s+/g, '_')}_prompt.txt`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast.success("Download started!")
+    } catch (error) {
+      console.error("Download failed:", error)
+      toast.error("Failed to download prompt content.")
+    }
+  }
+
+  const handleSubmitReview = async () => {
+    if (rating === 0) return
+    setSubmittingReview(true)
+    try {
+      await submitReview(String(prompt.id), rating, comment)
+      setReviewSubmitted(true)
+      setState("success")
+      toast.success("Review submitted!")
+    } catch (error) {
+      console.error("Review failed:", error)
+      toast.error("Failed to submit review.")
+    } finally {
+      setSubmittingReview(false)
     }
   }
 
@@ -86,7 +176,7 @@ export function PurchaseModal({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="bg-[#0a001a] border-2 border-[#2a2a30] max-w-md text-[#e0d4ff] shadow-[8px_8px_0_0_#2a2a30] p-0 overflow-hidden">
-        {state === "success" ? (
+        {state === "success" || state === "reviewing" ? (
           <div className="flex flex-col items-center gap-4 p-8">
             <div className="w-16 h-16 border-2 border-[#b4ff39] flex items-center justify-center bg-[#b4ff39]/10 shadow-[4px_4px_0_0_#b4ff39]">
               <Check className="w-8 h-8 text-[#b4ff39]" />
@@ -103,20 +193,66 @@ export function PurchaseModal({
                 </a>
               </p>
             )}
-            <div className="flex gap-3 w-full mt-4">
-              <button className="flex-1 bg-[#00ffff] border-2 border-[#00ffff] text-black px-4 py-3 text-sm font-extrabold shadow-[4px_4px_0_0_transparent] hover:shadow-[4px_4px_0_0_#fff] hover:-translate-y-1 transition-all uppercase items-center justify-center flex gap-2">
-                <Download className="w-4 h-4" />
-                Download
-              </button>
-              <button onClick={handleClose} className="flex-1 bg-transparent border-2 border-[#2a2a30] text-[#e0d4ff] px-4 py-3 text-sm font-extrabold hover:border-[#ff2d95] hover:shadow-[4px_4px_0_0_#ff2d95] hover:-translate-y-1 transition-all uppercase items-center justify-center flex gap-2">
-                <LayoutDashboard className="w-4 h-4 text-[#ff2d95]" />
-                Dashboard
-              </button>
-            </div>
-            <button className="text-xs text-[#a78bfa] border-b border-transparent hover:border-[#ff2d95] hover:text-[#ff2d95] mt-2 transition-all font-bold uppercase tracking-widest flex items-center gap-1 pb-0.5">
-              <Share2 className="w-3 h-3" />
-              Share Purchase
-            </button>
+
+            {state === "success" ? (
+              <>
+                <div className="flex gap-3 w-full mt-4">
+                  <button
+                    onClick={handleDownload}
+                    className="flex-1 bg-[#00ffff] border-2 border-[#00ffff] text-black px-4 py-3 text-sm font-extrabold shadow-[4px_4px_0_0_transparent] hover:shadow-[4px_4px_0_0_#fff] hover:-translate-y-1 transition-all uppercase items-center justify-center flex gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download
+                  </button>
+                  <button onClick={handleClose} className="flex-1 bg-transparent border-2 border-[#2a2a30] text-[#e0d4ff] px-4 py-3 text-sm font-extrabold hover:border-[#ff2d95] hover:shadow-[4px_4px_0_0_#ff2d95] hover:-translate-y-1 transition-all uppercase items-center justify-center flex gap-2">
+                    <LayoutDashboard className="w-4 h-4 text-[#ff2d95]" />
+                    Dashboard
+                  </button>
+                </div>
+                {!reviewSubmitted && (
+                  <button
+                    onClick={() => setState("reviewing")}
+                    className="text-xs text-[#a78bfa] border-b border-transparent hover:border-[#ff2d95] hover:text-[#ff2d95] mt-2 transition-all font-bold uppercase tracking-widest flex items-center gap-1 pb-0.5"
+                  >
+                    <Star className="w-3 h-3" />
+                    Rate & Review
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="w-full mt-2 p-4 bg-[#160f24] border-2 border-[#2a2a30]">
+                <p className="text-xs font-bold uppercase tracking-widest text-[#00ffff] mb-3">Rate & Review</p>
+                <div className="flex gap-2 mb-4">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <button key={s} onClick={() => setRating(s)}>
+                      <Star className={`w-6 h-6 ${s <= rating ? "fill-[#ff2d95] text-[#ff2d95]" : "text-[#2a2a30]"}`} />
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  className="w-full bg-black/50 border border-[#2a2a30] text-sm p-3 focus:border-[#ff2d95] outline-none text-[#e0d4ff] placeholder:text-[#a78bfa]/30"
+                  placeholder="Share your experience..."
+                  rows={3}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                />
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={() => setState("success")}
+                    className="flex-1 py-2 text-xs font-bold uppercase tracking-widest border border-[#2a2a30] text-[#a78bfa] hover:text-white"
+                  >
+                    Back
+                  </button>
+                  <button
+                    disabled={rating === 0 || submittingReview}
+                    onClick={handleSubmitReview}
+                    className="flex-1 bg-[#ff2d95] py-2 text-xs font-bold uppercase tracking-widest text-white disabled:opacity-30"
+                  >
+                    {submittingReview ? "Submitting..." : "Submit"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : state === "processing" ? (
           <div className="flex flex-col items-center gap-4 p-8">
@@ -173,22 +309,22 @@ export function PurchaseModal({
               {/* Price breakdown */}
               <div className="flex flex-col gap-2 p-4 bg-[#161218] border-2 border-[#2a2a30]">
                 <div className="flex justify-between text-sm">
-                  <span className="text-[#a78bfa] font-bold">Prompt Price</span>
-                  <span className="text-[#e0d4ff] font-mono font-bold">{prompt.price} {currency}</span>
+                  <span className="text-[#a78bfa] font-bold">Total Price</span>
+                  <span className="text-[#00ffff] font-mono font-bold">{total} {currency}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-[#a78bfa] font-bold">Platform Fee (2.5%)</span>
-                  <span className="text-[#e0d4ff] font-mono font-bold">{platformFee.toFixed(6)} {currency}</span>
+                <div className="flex justify-between text-[11px] mt-1 text-white/40 italic">
+                  <span>- Platform Fee (2.5%)</span>
+                  <span>{platformFee.toFixed(6)} {currency}</span>
                 </div>
                 {prompt.royalty > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#a78bfa] font-bold">Royalty ({prompt.royalty}%)</span>
-                    <span className="text-[#e0d4ff] font-mono font-bold">{royaltyFee.toFixed(6)} {currency}</span>
+                  <div className="flex justify-between text-[11px] text-white/40 italic">
+                    <span>- Royalty ({prompt.royalty}%)</span>
+                    <span>{royaltyFee.toFixed(6)} {currency}</span>
                   </div>
                 )}
-                <div className="border-t-2 border-[#2a2a30] mt-2 pt-3 flex justify-between items-end">
-                  <span className="text-sm font-extrabold text-[#e0d4ff] uppercase tracking-wider">Total Amount</span>
-                  <span className="text-lg font-extrabold text-[#00ffff]">{total.toFixed(6)} {currency}</span>
+                <div className="border-t border-[#2a2a30] mt-2 pt-2 flex justify-between items-center text-sm">
+                  <span className="text-[#e0d4ff] font-bold uppercase tracking-wider">Artist Receives</span>
+                  <span className="font-extrabold text-[#b4ff39]">{sellerReceives.toFixed(6)} {currency}</span>
                 </div>
               </div>
 
@@ -210,9 +346,10 @@ export function PurchaseModal({
                 </button>
                 <button
                   onClick={handleConfirm}
-                  className="flex-1 bg-[#ff2d95] border-2 border-[#ff2d95] text-white px-4 py-3.5 text-sm font-extrabold shadow-[4px_4px_0_0_transparent] hover:shadow-[4px_4px_0_0_#fff] hover:-translate-y-1 transition-all uppercase"
+                  disabled={isSelfPurchase}
+                  className={`flex-1 px-4 py-3.5 text-sm font-extrabold shadow-[4px_4px_0_0_transparent] transition-all uppercase border-2 ${isSelfPurchase ? "opacity-30 cursor-not-allowed border-white/20 text-white/20" : "bg-[#ff2d95] border-[#ff2d95] text-white hover:shadow-[4px_4px_0_0_#fff] hover:-translate-y-1"}`}
                 >
-                  Confirm Purchase
+                  {isSelfPurchase ? "Own Listing" : "Confirm Purchase"}
                 </button>
               </div>
             </div>
@@ -222,3 +359,4 @@ export function PurchaseModal({
     </Dialog>
   )
 }
+

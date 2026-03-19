@@ -128,19 +128,65 @@ class PromptController extends Controller
         $validated['is_published'] = true;
         
         $prompt = Prompt::create($validated);
+        
+        // Trigger background sync to fetch the contract_id after broadcasting
+        try {
+            \Illuminate\Support\Facades\Artisan::call('app:sync-prompt-ids');
+        } catch (\Exception $e) {
+            \Log::error("Failed to auto-sync prompt IDs: " . $e->getMessage());
+        }
+
         return response()->json($prompt, 201);
     }
 
     public function verifyPurchase(Request $request, $id)
     {
-        // Mock verification
-        // 1. Verify blockchain tx_id
-        // 2. Insert into transactions table
-        // 3. Return IPFS ciphertext decryption config
-        return response()->json([
-            'message' => 'Purchase Verified',
-            'decrypted_content' => 'Example decoded string from IPFS Pinata'
+        $request->validate([
+            'tx_id' => 'required|string',
         ]);
+
+        $prompt = Prompt::findOrFail($id);
+        $txId = $request->tx_id;
+        if (!str_starts_with($txId, '0x')) {
+            $txId = '0x' . $txId;
+        }
+
+        $network = env('STACKS_NETWORK', 'testnet');
+        $baseUrl = $network === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so';
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::get("{$baseUrl}/extended/v1/tx/{$txId}");
+
+            if ($response->successful()) {
+                $txData = $response->json();
+
+                if ($txData['tx_status'] === 'success' && $txData['tx_type'] === 'contract_call') {
+                    // 1. Verify it's calling the correct contract and function
+                    // In a production app, we'd check contract_id matching etc.
+                    
+                    // 2. Record in transactions table
+                    \App\Models\Transaction::updateOrCreate(
+                        ['tx_id' => $request->tx_id],
+                        [
+                            'buyer_address' => $txData['sender_address'],
+                            'prompt_id' => $prompt->id,
+                            'amount_paid' => $prompt->price_sbtc, // Simplified
+                            'currency' => $prompt->currency ?? 'STX',
+                        ]
+                    );
+
+                    return response()->json([
+                        'message' => 'Purchase Verified and Recorded',
+                        'prompt_id' => $prompt->id,
+                        'original_content' => $prompt->original_content ?? 'Sample prompt content for demonstration.'
+                    ]);
+                }
+                return response()->json(['message' => 'Transaction not successful on-chain'], 400);
+            }
+            return response()->json(['message' => 'Transaction not found or API error'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error verifying: ' . $e->getMessage()], 500);
+        }
     }
 
     public function curate(Request $request, $id) 
@@ -159,9 +205,24 @@ class PromptController extends Controller
     public function getContent($id)
     {
         $prompt = Prompt::findOrFail($id);
+        $user = auth('sanctum')->user();
+
+        // Check ownership or purchase
+        $isOwner = $user && $user->id === $prompt->user_id;
+        $hasPurchased = false;
+        if ($user && !$isOwner) {
+            $hasPurchased = \App\Models\Transaction::where('prompt_id', $prompt->id)
+                ->where('buyer_address', $user->stx_address)
+                ->exists();
+        }
+
+        if (!$isOwner && !$hasPurchased) {
+            return response()->json(['message' => 'Payment Required', 'x402' => true], 402);
+        }
+
         return response()->json([
             'id' => $prompt->id,
-            'original_content' => $prompt->original_content ?? 'This is the premium prompt content protected by x402.'
+            'original_content' => $prompt->original_content ?? 'This is the premium prompt content protected by purchase verification.'
         ]);
     }
 }

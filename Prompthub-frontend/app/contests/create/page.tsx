@@ -57,7 +57,7 @@ export default function CreateContestPage() {
 
             await openContractCall({
                 network: STACKS_TESTNET,
-                contractAddress: "ST3J88MT8YQ76JGG9175WW2DV20CM664TVTJVP8AT", // Placeholder Testnet Address
+                contractAddress: "ST2PFEWWGQVY8ERW3F60ZYKHPRK5BJ35ENKWW1G05", // Placeholder Testnet Address
                 contractName: "prompthub-contests",
                 functionName: "fund-contest",
                 functionArgs: [

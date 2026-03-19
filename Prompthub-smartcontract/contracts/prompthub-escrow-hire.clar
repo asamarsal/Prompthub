@@ -6,6 +6,7 @@
 (define-constant err-job-not-found (err u101))
 (define-constant err-invalid-status (err u102))
 (define-constant err-invalid-currency (err u103))
+(define-constant err-invalid-amount (err u104))
 
 (define-constant platform-admin tx-sender)
 (define-constant platform-fee-percent u25) ;; 2.5%
@@ -37,6 +38,7 @@
     (sbtc-contract <sip-010-trait>)
   )
   (let ((job-id (var-get next-job-id)))
+    (asserts! (> amount u0) err-invalid-amount)
     ;; Kunci dana ke Smart Contract PENGAMAN
     (if (is-eq currency-type "STX")
       (try! (stx-transfer? amount tx-sender (as-contract tx-sender)))
@@ -80,15 +82,27 @@
 
     (if (is-eq currency-type "STX")
       (begin
-        (try! (as-contract (contract-call? .prompthub-treasury deposit-stx fee)))
-        (try! (as-contract (stx-transfer? payout tx-sender artist)))
+        (if (> fee u0)
+          (try! (as-contract (contract-call? .prompthub-treasury deposit-stx fee)))
+          true
+        )
+        (if (> payout u0)
+          (try! (as-contract (stx-transfer? payout tx-sender artist)))
+          true
+        )
       )
       (begin
         (asserts! (is-eq (contract-of sbtc-contract) token-addr)
           err-invalid-currency
         )
-        (try! (as-contract (contract-call? .prompthub-treasury deposit-sbtc fee sbtc-contract)))
-        (try! (as-contract (contract-call? sbtc-contract transfer payout tx-sender artist none)))
+        (if (> fee u0)
+          (try! (as-contract (contract-call? .prompthub-treasury deposit-sbtc fee sbtc-contract)))
+          true
+        )
+        (if (> payout u0)
+          (try! (as-contract (contract-call? sbtc-contract transfer payout tx-sender artist none)))
+          true
+        )
       )
     )
 
@@ -115,12 +129,18 @@
     (asserts! (is-eq (get status job) "PENDING") err-invalid-status)
 
     (if (is-eq currency-type "STX")
-      (try! (as-contract (stx-transfer? amount tx-sender client)))
+      (if (> amount u0)
+        (try! (as-contract (stx-transfer? amount tx-sender client)))
+        true
+      )
       (begin
         (asserts! (is-eq (contract-of sbtc-contract) token-addr)
           err-invalid-currency
         )
-        (try! (as-contract (contract-call? sbtc-contract transfer amount tx-sender client none)))
+        (if (> amount u0)
+          (try! (as-contract (contract-call? sbtc-contract transfer amount tx-sender client none)))
+          true
+        )
       )
     )
     (map-set jobs job-id (merge job { status: "REFUNDED" }))
@@ -155,12 +175,18 @@
     (asserts! (is-eq (get status job) "DISPUTED") err-invalid-status)
 
     (if (is-eq currency-type "STX")
-      (try! (as-contract (stx-transfer? amount tx-sender payout-to)))
+      (if (> amount u0)
+        (try! (as-contract (stx-transfer? amount tx-sender payout-to)))
+        true
+      )
       (begin
         (asserts! (is-eq (contract-of sbtc-contract) token-addr)
           err-invalid-currency
         )
-        (try! (as-contract (contract-call? sbtc-contract transfer amount tx-sender payout-to none)))
+        (if (> amount u0)
+          (try! (as-contract (contract-call? sbtc-contract transfer amount tx-sender payout-to none)))
+          true
+        )
       )
     )
     (map-set jobs job-id (merge job { status: "RESOLVED" }))

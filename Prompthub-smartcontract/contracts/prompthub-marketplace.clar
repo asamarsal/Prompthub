@@ -109,7 +109,11 @@
       (seller (unwrap! (nft-get-owner? prompt prompt-id) err-prompt-not-found))
       (fee (/ (* price platform-fee-percent) u1000))
       (royalty (/ (* price royalty-pct) u1000))
-      (seller-amount (- (- price fee) royalty))
+      ;; If primary sale (seller is creator), royalty stays with seller
+      (seller-amount (if (is-eq seller creator)
+        (- price fee)
+        (- (- price fee) royalty)
+      ))
     )
     (asserts! (get is-active prompt-data) err-prompt-not-found)
     (asserts! (not (is-eq tx-sender seller)) err-not-authorized)
@@ -117,29 +121,41 @@
     (if (is-eq currency-type "STX")
       (begin
         ;; Transfer STX Fee to Treasury
-        (try! (contract-call? .prompthub-treasury deposit-stx fee))
+        (if (> fee u0)
+          (try! (contract-call? .prompthub-treasury deposit-stx fee))
+          true
+        )
         ;; Transfer Royalty to original Creator (if this is a secondary sale)
         (if (and (> royalty u0) (not (is-eq seller creator)))
           (try! (stx-transfer? royalty tx-sender creator))
           true
         )
         ;; Transfer strictly-seller remainder
-        (try! (stx-transfer? seller-amount tx-sender seller))
+        (if (> seller-amount u0)
+          (try! (stx-transfer? seller-amount tx-sender seller))
+          true
+        )
       )
       (begin
         ;; Verify correct sBTC contract is being passed dynamically
         (asserts! (is-eq currency-type "sBTC") err-invalid-currency)
         ;; Transfer sBTC Fee to Treasury
-        (try! (contract-call? .prompthub-treasury deposit-sbtc fee sbtc-contract))
+        (if (> fee u0)
+          (try! (contract-call? .prompthub-treasury deposit-sbtc fee sbtc-contract))
+          true
+        )
         ;; Transfer Royalty to original Creator (if this is a secondary sale)
         (if (and (> royalty u0) (not (is-eq seller creator)))
           (try! (contract-call? sbtc-contract transfer royalty tx-sender creator none))
           true
         )
         ;; Transfer remainder
-        (try! (contract-call? sbtc-contract transfer seller-amount tx-sender seller
-          none
-        ))
+        (if (> seller-amount u0)
+          (try! (contract-call? sbtc-contract transfer seller-amount tx-sender seller
+            none
+          ))
+          true
+        )
       )
     )
 

@@ -367,6 +367,26 @@ export async function getPromptReviews(id: string): Promise<any> {
 }
 
 /**
+ * POST /api/prompts/{id}/reviews
+ */
+export async function submitReview(promptId: string, rating: number, comment: string): Promise<any> {
+    return request<any>(`/api/prompts/${promptId}/reviews`, {
+        method: "POST",
+        body: JSON.stringify({ rating, comment }),
+    });
+}
+
+/**
+ * POST /api/prompts/{id}/verify-purchase
+ */
+export async function recordTransaction(promptId: string, txId: string): Promise<any> {
+    return request<any>(`/api/prompts/${promptId}/verify-purchase`, {
+        method: "POST",
+        body: JSON.stringify({ tx_id: txId }),
+    });
+}
+
+/**
  * GET /api/prompts/{id}/transactions
  * Fetches transaction history for a specific prompt.
  */
