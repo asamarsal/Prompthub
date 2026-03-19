@@ -688,7 +688,7 @@ export default function PromptDetailPageContent({ params }: { params: { id: stri
                                     onClick={() => setPurchaseOpen(true)}
                                     disabled={!!premiumContent || !prompt.contract_id || prompt.contract_id === 0}
                                     className={cn(
-                                        "w-full py-4 text-base font-extrabold uppercase mb-1 transition-all border-2",
+                                        "w-full py-4 text-base font-extrabold uppercase mb-4 transition-all border-2",
                                         premiumContent
                                             ? "bg-[#b4ff39]/10 border-[#b4ff39] text-[#b4ff39] cursor-default"
                                             : (!prompt.contract_id || prompt.contract_id === 0)
