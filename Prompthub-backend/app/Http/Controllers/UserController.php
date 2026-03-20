@@ -64,10 +64,16 @@ class UserController extends Controller
     /**
      * GET /api/users/{address}/profile
      * Returns a public user profile with aggregated stats and follow status.
+     * Supports lookup by stx_address, username, or name.
      */
     public function publicProfile(Request $request, $address)
     {
-        $user = User::where('stx_address', $address)->firstOrFail();
+        // Try stx_address first, then username, then name (for URL-based routing)
+        $user = User::where('stx_address', $address)
+            ->orWhere('username', $address)
+            ->orWhere('name', $address)
+            ->firstOrFail();
+
         $authUser = auth('sanctum')->user();
 
         $promptIds = Prompt::where('user_id', $user->id)->pluck('id');
@@ -79,18 +85,18 @@ class UserController extends Controller
         $reviewsCount = Review::whereIn('prompt_id', $promptIds)->count();
 
         $followerCount = DB::table('follows')
-            ->where('following_address', $address)
+            ->where('following_address', $user->stx_address)
             ->count();
 
         $followingCount = DB::table('follows')
-            ->where('follower_address', $address)
+            ->where('follower_address', $user->stx_address)
             ->count();
 
         $isFollowing = false;
         if ($authUser) {
             $isFollowing = DB::table('follows')
                 ->where('follower_address', $authUser->stx_address)
-                ->where('following_address', $address)
+                ->where('following_address', $user->stx_address)
                 ->exists();
         }
 

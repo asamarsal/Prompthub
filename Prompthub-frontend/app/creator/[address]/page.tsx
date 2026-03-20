@@ -30,13 +30,15 @@ export default function CreatorProfilePage({ params }: { params: Promise<{ addre
     const load = async () => {
       setLoading(true)
       try {
-        const [profileData, promptsData] = await Promise.all([
-          fetchCreatorProfile(creatorAddress),
-          getPrompts({ user_address: creatorAddress }),
-        ])
+        // Step 1: fetch profile by name or address
+        const profileData = await fetchCreatorProfile(creatorAddress)
         setProfile(profileData)
         setFollowed(profileData.is_following ?? false)
         setFollowerCount(profileData.stats?.follower_count ?? 0)
+
+        // Step 2: use the real stx_address to fetch prompts
+        const realAddress = profileData.stx_address ?? creatorAddress
+        const promptsData = await getPrompts({ user_address: realAddress })
         setPrompts(promptsData.data ?? [])
       } catch (e) {
         console.error("Failed to load creator profile", e)
@@ -141,14 +143,21 @@ export default function CreatorProfilePage({ params }: { params: Promise<{ addre
           <div className="absolute -bottom-14 left-6 md:left-10">
             <div className="w-28 h-28 bg-gradient-to-br from-[#ff2d95] to-[#00ffff] p-0.5 shadow-[4px_4px_0_0_#00ffff]">
               {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt={displayName} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-[#0a001a] flex items-center justify-center">
-                  <span className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-[#ff2d95] to-[#00ffff]">
-                    {initials}
-                  </span>
-                </div>
-              )}
+                <img
+                  src={profile.avatar_url}
+                  alt={displayName}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              ) : null}
+              <div
+                className="w-full h-full bg-[#0a001a] flex items-center justify-center"
+                style={{ display: profile?.avatar_url ? 'none' : 'flex' }}
+              >
+                <span className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-[#ff2d95] to-[#00ffff]">
+                  {initials}
+                </span>
+              </div>
             </div>
           </div>
         </div>
