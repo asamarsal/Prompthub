@@ -146,14 +146,27 @@ export function PromptCard({ prompt }: { prompt: Prompt & { isBookmarked?: boole
             </button>
           </div>
 
-          {/* Tags */}
+          {/* Dynamic Tags */}
           <div className="flex flex-wrap gap-3 mt-4 pt-1">
-            <span className="px-2 py-1 flex items-center justify-center text-[10px] font-display font-bold bg-transparent text-[#00ffff] uppercase border border-[#00ffff]/40">
-              #UI
-            </span>
-            <span className="px-2 py-1 flex items-center justify-center text-[10px] font-display font-bold bg-transparent text-[#ff2d95] uppercase border border-[#ff2d95]/40">
-              #GLASSMORPHISM
-            </span>
+            {prompt.tags && prompt.tags.length > 0 ? (
+              prompt.tags.slice(0, 3).map((tag, index) => (
+                <span
+                  key={index}
+                  className={cn(
+                    "px-2 py-1 flex items-center justify-center text-[10px] font-display font-bold bg-transparent uppercase border",
+                    index % 2 === 0
+                      ? "text-[#00ffff] border-[#00ffff]/40"
+                      : "text-[#ff2d95] border-[#ff2d95]/40"
+                  )}
+                >
+                  #{tag.toUpperCase()}
+                </span>
+              ))
+            ) : (
+              <span className="px-2 py-1 flex items-center justify-center text-[10px] font-display font-bold bg-transparent text-[#00ffff] uppercase border border-[#00ffff]/40">
+                #PROMPTHUB
+              </span>
+            )}
           </div>
 
           {/* Footer / Action */}
