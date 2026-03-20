@@ -99,6 +99,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/me/bookmarks', [BookmarkController::class, 'index']);
     Route::get('/users/me/purchased', [PromptController::class, 'purchased']);
     Route::post('/prompts/{id}/bookmark', [BookmarkController::class, 'toggle']);
+
+    // Follow
+    Route::post('/users/{address}/follow', [UserController::class, 'toggleFollow']);
 });
 
 Route::get('/users/{address}', [AuthController::class, 'show']);
+Route::get('/users/{address}/profile', [UserController::class, 'publicProfile']);

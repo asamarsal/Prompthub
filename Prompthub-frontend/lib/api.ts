@@ -540,3 +540,23 @@ export async function declareContestWinner(id: string, submissionId: string): Pr
         body: JSON.stringify({ submission_id: submissionId }),
     });
 }
+
+// ─── Creator Profiles & Follow ─────────────────────────────────────────────
+
+/**
+ * GET /api/users/{address}/profile
+ * Returns a public user profile with aggregated stats and follow status.
+ */
+export async function fetchCreatorProfile(address: string): Promise<any> {
+    return request<any>(`/api/users/${encodeURIComponent(address)}/profile`);
+}
+
+/**
+ * POST /api/users/{address}/follow
+ * Toggle follow/unfollow for the given user address.
+ */
+export async function toggleFollow(address: string): Promise<{ is_following: boolean; follower_count: number; message: string }> {
+    return request<any>(`/api/users/${encodeURIComponent(address)}/follow`, {
+        method: "POST",
+    });
+}
