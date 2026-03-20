@@ -14,7 +14,6 @@ class FileController extends Controller
         ]);
 
         $file = $request->file('file');
-        $jwt = env('PINATA_JWT');
         $jwt = config('services.pinata.jwt');
 
         if (!$jwt) {
@@ -63,7 +62,7 @@ class FileController extends Controller
             'properties' => 'nullable|array',
         ]);
 
-        $jwt = env('PINATA_JWT');
+        $jwt = config('services.pinata.jwt');
         if (!$jwt) {
             return response()->json(['error' => 'Pinata JWT not configured'], 500);
         }
@@ -90,7 +89,7 @@ class FileController extends Controller
 
             $data = $response->json();
             $cid = $data['IpfsHash'];
-            $gateway = env('PINATA_GATEWAY', 'https://gateway.pinata.cloud/ipfs/');
+            $gateway = config('services.pinata.gateway', 'https://gateway.pinata.cloud/ipfs/');
 
             return response()->json([
                 'cid' => $cid,
